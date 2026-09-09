@@ -40,3 +40,5 @@ coding!
 - Teammate name #2: (https://www.linkedin.com/in/ahmet-sagdasli) ---(https://github.com/ahmetsagdasli)
    ...
 - Teammate name #n: [GitHub](https://github.com/ghaccountname) / [LinkedIn](https://linkedin.com/in/liaccountname)
+- Zaina Alahmar: [GitHub](https://github.com/ZainaAlahmar) / [LinkedIn](https://www.linkedin.com/in/zaina-alahmar)
+  
