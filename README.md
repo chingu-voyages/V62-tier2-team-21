@@ -42,4 +42,5 @@ coding!
 - Teammate name #n: [GitHub](https://github.com/ghaccountname) / [LinkedIn](https://linkedin.com/in/liaccountname)
 - Zaina Alahmar: [GitHub](https://github.com/ZainaAlahmar) / [LinkedIn](https://www.linkedin.com/in/zaina-alahmar)
 - Sakshi: [GitHub](https://github.com/sakship2204) / [LinkedIn](https://www.linkedin.com/in/sakshi-pandita-88b4741b0/)
+- Chimdindu Nwobodo: <a href="https://github.com/chimdisandra"> Github</a> / <a href="https://www.linkedin.com/in/chimdindu-nwobodo-ba0a75316">Linkedin</a>
   
