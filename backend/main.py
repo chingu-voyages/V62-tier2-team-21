@@ -1,4 +1,9 @@
+import json
 import os
+import urllib.error
+import urllib.request
+from typing import Literal
+from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -9,7 +14,7 @@ from pydantic import BaseModel, Field
 
 load_dotenv()
 
-app = FastAPI(title="Learning Path LLM API", version="0.1.0")
+app = FastAPI(title="Learning Path LLM API", version="0.2.0")
 
 # Vite's local development server. Change or remove this in production.
 app.add_middleware(
@@ -20,6 +25,8 @@ app.add_middleware(
     allow_headers=["Content-Type"],
 )
 
+Provider = Literal["openai", "gemini"]
+
 
 class PromptRequest(BaseModel):
     prompt: str = Field(
@@ -27,21 +34,34 @@ class PromptRequest(BaseModel):
         max_length=10_000,
         description="The user's prompt for the language model.",
     )
+    provider: Provider = Field(
+        default="openai",
+        description="The LLM provider to use: openai or gemini.",
+    )
 
 
 class GenerateResponse(BaseModel):
     response: str
     response_id: str
     model: str
+    provider: Provider
+
+
+class LLMResponse(BaseModel):
+    """Provider-neutral response used by both output endpoints."""
+
+    text: str
+    response_id: str
+    model: str
+    provider: Provider
 
 
 @app.get("/health")
 def health_check():
-    return {"status": "ok"}
+    return {"status": "ok", "providers": ["openai", "gemini"]}
 
 
-def create_llm_response(prompt: str):
-    """Create one LLM response while keeping provider errors private."""
+def _openai_response(prompt: str) -> LLMResponse:
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
         raise HTTPException(status_code=500, detail="OPENAI_API_KEY is not configured.")
@@ -55,26 +75,71 @@ def create_llm_response(prompt: str):
             store=False,
         )
     except Exception as error:
-        # Do not expose provider or configuration details to the client.
-        raise HTTPException(status_code=502, detail="The language model is temporarily unavailable.") from error
+        raise HTTPException(
+            status_code=502, detail="The OpenAI service is temporarily unavailable."
+        ) from error
 
-    return response, model
+    return LLMResponse(
+        text=response.output_text,
+        response_id=response.id,
+        model=model,
+        provider="openai",
+    )
+
+
+def _gemini_response(prompt: str) -> LLMResponse:
+    """Call Gemini's generateContent REST API without adding an SDK dependency."""
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        raise HTTPException(status_code=500, detail="GEMINI_API_KEY is not configured.")
+
+    model = os.getenv("GEMINI_MODEL", "gemini-3.6-flash")
+    body = json.dumps({"contents": [{"parts": [{"text": prompt}]}]}).encode("utf-8")
+    request = urllib.request.Request(
+        url=f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
+        data=body,
+        headers={"Content-Type": "application/json", "x-goog-api-key": api_key},
+        method="POST",
+    )
+
+    try:
+        with urllib.request.urlopen(request, timeout=60) as api_response:
+            payload = json.loads(api_response.read().decode("utf-8"))
+        text = payload["candidates"][0]["content"]["parts"][0]["text"]
+    except (urllib.error.URLError, urllib.error.HTTPError, KeyError, IndexError, json.JSONDecodeError) as error:
+        raise HTTPException(
+            status_code=502, detail="The Gemini service is temporarily unavailable."
+        ) from error
+
+    return LLMResponse(
+        text=text,
+        response_id=f"gemini-{uuid4()}",
+        model=model,
+        provider="gemini",
+    )
+
+
+def create_llm_response(prompt: str, provider: Provider = "openai") -> LLMResponse:
+    """Create one response from the selected provider."""
+    if provider == "gemini":
+        return _gemini_response(prompt)
+    return _openai_response(prompt)
 
 
 @app.post("/generate", response_model=GenerateResponse)
 def generate(request: PromptRequest):
     """Send one user prompt to the LLM and return structured JSON."""
-    response, model = create_llm_response(request.prompt)
+    response = create_llm_response(request.prompt, request.provider)
 
-    return {
-        "response": response.output_text,
-        "response_id": response.id,
-        "model": model,
-    }
+    return GenerateResponse(
+        response=response.text,
+        response_id=response.response_id,
+        model=response.model,
+        provider=response.provider,
+    )
 
 
 @app.post("/generate/text", response_class=PlainTextResponse)
 def generate_text(request: PromptRequest):
     """Send one user prompt to the LLM and return readable plain text."""
-    response, _ = create_llm_response(request.prompt)
-    return response.output_text
+    return create_llm_response(request.prompt, request.provider).text
