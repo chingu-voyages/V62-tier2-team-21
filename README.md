@@ -1,5 +1,24 @@
 # voyage-tasks
 
+## LLM backend
+
+Run the API from the project root:
+
+```bash
+uvicorn backend.main:app --reload
+```
+
+Copy `backend/.env.example` to `backend/.env`, then configure the provider keys
+you need. `POST /generate` and `POST /generate/text` accept an optional
+`provider` field: `"openai"` (the default) or `"gemini"`.
+
+```json
+{
+  "prompt": "Create a frontend learning path.",
+  "provider": "gemini"
+}
+```
+
 Your project's `readme` is as important to success as your code. For 
 this reason you should put as much care into its creation and maintenance
 as you would any other component of the application.

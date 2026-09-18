@@ -1,2 +1,5 @@
 # MacOS-specific files
 .DS_Store
+
+# Local secrets
+backend/.env
