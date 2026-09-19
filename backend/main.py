@@ -93,10 +93,10 @@ def _gemini_response(prompt: str) -> LLMResponse:
     if not api_key:
         raise HTTPException(status_code=500, detail="GEMINI_API_KEY is not configured.")
 
-    model = os.getenv("GEMINI_MODEL", "gemini-3.6-flash")
-    body = json.dumps({"contents": [{"parts": [{"text": prompt}]}]}).encode("utf-8")
+    model = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
+    body = json.dumps({"model": model, "input": prompt}).encode("utf-8")
     request = urllib.request.Request(
-        url=f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
+        url="https://generativelanguage.googleapis.com/v1beta/interactions",
         data=body,
         headers={"Content-Type": "application/json", "x-goog-api-key": api_key},
         method="POST",
@@ -105,7 +105,7 @@ def _gemini_response(prompt: str) -> LLMResponse:
     try:
         with urllib.request.urlopen(request, timeout=60) as api_response:
             payload = json.loads(api_response.read().decode("utf-8"))
-        text = payload["candidates"][0]["content"]["parts"][0]["text"]
+        text = payload["steps"][-1]["content"][0]["text"]
     except (urllib.error.URLError, urllib.error.HTTPError, KeyError, IndexError, json.JSONDecodeError) as error:
         raise HTTPException(
             status_code=502, detail="The Gemini service is temporarily unavailable."
