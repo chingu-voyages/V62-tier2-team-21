@@ -1,0 +1,2 @@
+export const CAREERGOAL_WORD_MAX = 100;
+export const PASTEXPERIENCE_WORD_MAX = 100;
