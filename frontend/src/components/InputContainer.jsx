@@ -24,12 +24,15 @@ export default function InputContainer() {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const API_URL =
+    import.meta.env.VITE_API_URL || "http://localhost:8000";
+
   //TODO: send to backend
   async function sendData(enteredData) {
     try {
       setIsSubmitting(true);
       setSubmitError(null);
-      const response = await fetch("http://localhost:8000/user-input", {
+      const response = await fetch(`${API_URL}/user-input`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
