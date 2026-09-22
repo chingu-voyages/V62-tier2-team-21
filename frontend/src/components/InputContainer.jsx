@@ -29,7 +29,7 @@ export default function InputContainer() {
     try {
       setIsSubmitting(true);
       setSubmitError(null);
-      const response = await fetch("url", {
+      const response = await fetch("http://localhost:8000/user-input", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
