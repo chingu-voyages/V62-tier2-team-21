@@ -153,9 +153,9 @@ export default function InputContainer() {
         <option value="" disabled>
           -- Select your current level --
         </option>
-        <option value="1">level test1</option>
-        <option value="2">level test2</option>
-        <option value="3">level test3</option>
+        <option value="beginner">Beginner</option>
+        <option value="intermediate">Intermediate</option>
+        <option value="advanced">Advanced</option>
       </SelectInput>
 
       <SelectInput

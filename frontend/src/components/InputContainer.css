@@ -1,4 +1,5 @@
 .input-container {
+  font-family: "Roboto", sans-serif;
   margin-top: 3rem;
   margin-bottom: 3rem;
 
@@ -32,4 +33,13 @@
   margin-top: 3rem;
   align-self: flex-end;
   cursor: pointer;
+}
+
+.input-submit-button:hover {
+  background-color: #406653;
+}
+
+.input-submit-button:active {
+  background-color: #263f33;
+  transform: translateY(1px);
 }

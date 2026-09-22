@@ -1,10 +1,12 @@
 import InputContainer from "../components/InputContainer";
 import "./FormPage.css";
+import Footer from "../components/layout/Footer";
 
 export default function FormPage() {
   return (
-    <main className="form-page">
+    <div className="form-page">
       <InputContainer />
-    </main>
+      <Footer />
+    </div>
   );
 }
