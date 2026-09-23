@@ -5,8 +5,8 @@ import NumberInput from "./NumberInput";
 import "./InputContainer.css";
 import { validateInput } from "../util/validation";
 import {
-  CAREERGOAL_WORD_MAX,
-  PASTEXPERIENCE_WORD_MAX,
+  CAREERGOAL_CHARACTERS_MAX,
+  PASTEXPERIENCE_CHARACTERS_MAX,
 } from "../constants/formConstant";
 
 export default function InputContainer() {
@@ -58,13 +58,13 @@ export default function InputContainer() {
     const currentSkillLevel = target.currentSkillLevel.value;
     const workingIndustry = target.workingIndustry.value;
     const pastExperience = target.pastExperience.value;
-    const availableTime = target.availableTime.value;
+    const availableTime = +target.availableTime.value;
 
     const errors = validateInput(
       careerGoal,
       pastExperience,
-      careerGoalWordCount,
-      pastExperienceWordCount,
+      careerGoalCharacterCount,
+      pastExperienceCharacterCount,
     );
 
     if (errors.careerGoal !== "" || errors.pastExperience !== "") {
@@ -90,7 +90,7 @@ export default function InputContainer() {
       current_skill_level: currentSkillLevel,
       working_industry: workingIndustry,
       past_experience: pastExperience,
-      available_time: +availableTime,
+      available_time: availableTime,
     };
 
     const success = await sendData(enteredData);
@@ -112,15 +112,8 @@ export default function InputContainer() {
     });
   }
 
-  const careerGoalWordCount =
-    inputData.careerGoal.trim() === ""
-      ? 0
-      : inputData.careerGoal.trim().split(/\s+/).length;
-
-  const pastExperienceWordCount =
-    inputData.pastExperience.trim() === ""
-      ? 0
-      : inputData.pastExperience.trim().split(/\s+/).length;
+  const careerGoalCharacterCount = inputData.careerGoal.length;
+  const pastExperienceCharacterCount = inputData.pastExperience.length;
 
   return (
     <form onSubmit={handleSubmit} className="input-container">
@@ -130,16 +123,15 @@ export default function InputContainer() {
         title="1. Career Goal"
         description={
           <>
-            Describe the professional role, position, or industry
-            <br />
-            you aim to achieve in the future.
+            Describe the professional role, position, or industry you aim to
+            achieve in the future.
           </>
         }
         placeholder="e.g., To become a Lead Product Manager..."
-        maxWords={CAREERGOAL_WORD_MAX}
+        maxCharacters={CAREERGOAL_CHARACTERS_MAX}
         required
         onChange={(e) => handleCount(e, "careerGoal")}
-        wordCount={careerGoalWordCount}
+        characterCount={careerGoalCharacterCount}
         inputError={inputError}
       />
 
@@ -163,8 +155,8 @@ export default function InputContainer() {
         title="3. Working Industry"
         description={
           <>
-            Select the primary industry in which you currently <br /> work or
-            have the most experience.
+            Select the primary industry in which you currently work or have the
+            most experience.
           </>
         }
         required
@@ -173,9 +165,11 @@ export default function InputContainer() {
         <option value="" disabled>
           -- Select the industry --
         </option>
-        <option value="1">industry test1</option>
-        <option value="2">industry test2</option>
-        <option value="3">industry test3</option>
+        <option value="frontend-development">Frontend Development</option>
+        <option value="backend-development">Backend Development</option>
+        <option value="data-science-ml">Data Science/ML</option>
+        <option value="cybersecurity">Cybersecurity</option>
+        <option value="product-management">Product Management</option>
       </SelectInput>
 
       <TextAreaInput
@@ -183,14 +177,14 @@ export default function InputContainer() {
         title="4. Past Experience"
         description={
           <>
-            Provide a brief summary of your past <br />
-            education, work experience, <br /> or relevant competencies.
+            Provide a brief summary of your past education, work experience, or
+            relevant competencies.
           </>
         }
         placeholder="e.g., Bachelor's in Computer Science..."
-        maxWords={PASTEXPERIENCE_WORD_MAX}
+        maxCharacters={PASTEXPERIENCE_CHARACTERS_MAX}
         onChange={(e) => handleCount(e, "pastExperience")}
-        wordCount={pastExperienceWordCount}
+        characterCount={pastExperienceCharacterCount}
         inputError={inputError}
         required
       />
@@ -200,8 +194,8 @@ export default function InputContainer() {
         title="5. Available Time / Time Commitment"
         description={
           <>
-            Indicate the average number of hours per week you <br /> can
-            dedicate to this program.
+            Indicate the average number of hours per week you can dedicate to
+            this program.
           </>
         }
         required
