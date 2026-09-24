@@ -15,18 +15,11 @@ export default function TextAreaInput({
         {title}
       </label>
       <p className="input-description">{description}</p>
-      <textarea
-        className={`input-control ${characterCount > maxCharacters ? "word-count-alert" : ""}`}
-        id={id}
-        name={id}
-        {...props}
-      />
+      <textarea className="input-control" id={id} name={id} {...props} />
       <div className="word-alert-container">
         <p className="error-message">{inputError[id]}</p>
         {maxCharacters && (
-          <p
-            className={`word-count ${characterCount > maxCharacters ? "word-count-alert" : ""}`}
-          >
+          <p className="word-count">
             {" "}
             {characterCount} / {maxCharacters} characters max
           </p>

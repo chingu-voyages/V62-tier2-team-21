@@ -129,6 +129,7 @@ export default function InputContainer() {
         }
         placeholder="e.g., To become a Lead Product Manager..."
         maxCharacters={CAREERGOAL_CHARACTERS_MAX}
+        maxLength={CAREERGOAL_CHARACTERS_MAX}
         required
         onChange={(e) => handleCount(e, "careerGoal")}
         characterCount={careerGoalCharacterCount}
@@ -183,6 +184,7 @@ export default function InputContainer() {
         }
         placeholder="e.g., Bachelor's in Computer Science..."
         maxCharacters={PASTEXPERIENCE_CHARACTERS_MAX}
+        maxLength={PASTEXPERIENCE_CHARACTERS_MAX}
         onChange={(e) => handleCount(e, "pastExperience")}
         characterCount={pastExperienceCharacterCount}
         inputError={inputError}
