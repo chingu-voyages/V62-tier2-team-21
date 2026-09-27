@@ -1,5 +1,7 @@
 import json
+import logging
 import os
+import time
 import urllib.error
 import urllib.request
 from typing import Literal
@@ -10,10 +12,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse
 from openai import OpenAI
 from dotenv import load_dotenv
-from pydantic import BaseModel, Field
 from pydantic import BaseModel, Field, field_validator
 
 load_dotenv()
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+MAX_OUTPUT_TOKENS = int(os.getenv("LLM_MAX_OUTPUT_TOKENS", "2000"))
 
 app = FastAPI(title="Learning Path LLM API", version="0.2.0")
 
@@ -99,7 +105,10 @@ def build_learning_path_prompt(request: UserInputRequest) -> str:
         f"- Working industry: {request.working_industry}\n"
         f"- Past experience: {request.past_experience}\n"
         f"- Available time per week: {request.available_time} hours\n\n"
-        "Provide a structured, actionable learning path with concrete steps and resources."
+        "Provide a structured, actionable learning path with concrete steps and resources.\n\n"
+        "Limit the response to at most 300 words. Provide 4-5 steps, each with a "
+        "1-2 sentence explanation and at most 2 resources. Do not include an "
+        "introduction or closing paragraph."
     )
 
 
@@ -124,16 +133,32 @@ def _openai_response(prompt: str) -> LLMResponse:
 
     model = os.getenv("OPENAI_MODEL", "gpt-5.6-luna")
 
+    start = time.perf_counter()
     try:
-        response = OpenAI(api_key=api_key).responses.create(
+        response = OpenAI(api_key=api_key, timeout=60).responses.create(
             model=model,
             input=prompt,
             store=False,
+            max_output_tokens=MAX_OUTPUT_TOKENS,
+            reasoning={"effort": "low"},
         )
     except Exception as error:
+        logger.exception("OpenAI request failed")
         raise HTTPException(
             status_code=502, detail="The OpenAI service is temporarily unavailable."
         ) from error
+
+    logger.info(
+        "OpenAI response in %.2fs, usage=%s",
+        time.perf_counter() - start,
+        response.usage,
+    )
+
+    if response.status == "incomplete":
+        raise HTTPException(
+            status_code=502,
+            detail=f"The OpenAI response was incomplete: {response.incomplete_details.reason}",
+        )
 
     return LLMResponse(
         text=response.output_text,
@@ -149,8 +174,18 @@ def _gemini_response(prompt: str) -> LLMResponse:
     if not api_key:
         raise HTTPException(status_code=500, detail="GEMINI_API_KEY is not configured.")
 
-    model = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
-    body = json.dumps({"model": model, "input": prompt}).encode("utf-8")
+    model = os.getenv("GEMINI_MODEL", "gemini-3.6-flash")
+    body = json.dumps(
+        {
+            "model": model,
+            "input": prompt,
+            "store": False,
+            "generation_config": {
+                "thinking_level": "minimal",
+                "max_output_tokens": MAX_OUTPUT_TOKENS,
+            },
+        }
+    ).encode("utf-8")
     request = urllib.request.Request(
         url="https://generativelanguage.googleapis.com/v1beta/interactions",
         data=body,
@@ -158,11 +193,44 @@ def _gemini_response(prompt: str) -> LLMResponse:
         method="POST",
     )
 
+    start = time.perf_counter()
+    max_attempts = 2
+    for attempt in range(1, max_attempts + 1):
+        try:
+            with urllib.request.urlopen(request, timeout=60) as api_response:
+                payload = json.loads(api_response.read().decode("utf-8"))
+            break
+        except urllib.error.HTTPError as error:
+            if error.code in (429, 503) and attempt < max_attempts:
+                logger.warning("Gemini request got HTTP %s, retrying once", error.code)
+                time.sleep(1)
+                continue
+            logger.exception("Gemini request failed")
+            raise HTTPException(
+                status_code=502, detail="The Gemini service is temporarily unavailable."
+            ) from error
+        except (urllib.error.URLError, json.JSONDecodeError) as error:
+            logger.exception("Gemini request failed")
+            raise HTTPException(
+                status_code=502, detail="The Gemini service is temporarily unavailable."
+            ) from error
+
+    logger.info(
+        "Gemini response in %.2fs, usage=%s",
+        time.perf_counter() - start,
+        payload.get("usage"),
+    )
+
+    if payload.get("status") == "incomplete":
+        raise HTTPException(
+            status_code=502,
+            detail="The Gemini response was incomplete; try a shorter profile or increase LLM_MAX_OUTPUT_TOKENS.",
+        )
+
     try:
-        with urllib.request.urlopen(request, timeout=60) as api_response:
-            payload = json.loads(api_response.read().decode("utf-8"))
         text = payload["steps"][-1]["content"][0]["text"]
-    except (urllib.error.URLError, urllib.error.HTTPError, KeyError, IndexError, json.JSONDecodeError) as error:
+    except (KeyError, IndexError) as error:
+        logger.exception("Unexpected Gemini response shape")
         raise HTTPException(
             status_code=502, detail="The Gemini service is temporarily unavailable."
         ) from error
