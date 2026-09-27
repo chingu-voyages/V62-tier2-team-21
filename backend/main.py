@@ -11,6 +11,7 @@ from fastapi.responses import PlainTextResponse
 from openai import OpenAI
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 load_dotenv()
 
@@ -34,6 +35,14 @@ class UserInputRequest(BaseModel):
     working_industry: str = Field(min_length=1)
     past_experience: str = Field(min_length=1)
     available_time: int = Field(ge=1, le=168)
+
+    @field_validator("career_goal", "past_experience")
+    @classmethod
+    def require_description(cls, value: str) -> str:
+        value = value.strip()
+        if not any(character.isalpha() for character in value):
+            raise ValueError("Please enter a description containing letters.")
+        return value
 
 
 class PromptRequest(BaseModel):
