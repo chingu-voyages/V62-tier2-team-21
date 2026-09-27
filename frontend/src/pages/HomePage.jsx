@@ -1,5 +1,6 @@
 import "./HomePage.css";
 import "bootstrap-icons/font/bootstrap-icons.css";
+import Footer from "../components/layout/Footer";
 
 export default function HomePage() {
   return (
@@ -15,11 +16,7 @@ export default function HomePage() {
           <p>Get Started</p>
         </button>
       </main>
-      <footer className="team-footer">
-        <a href="https://github.com/chingu-voyages/V62-tier2-team-21">
-          Chingu | V62 | Team 21
-        </a>
-      </footer>
+      <Footer />
     </div>
   );
 }

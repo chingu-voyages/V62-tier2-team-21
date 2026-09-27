@@ -11,6 +11,7 @@ from fastapi.responses import PlainTextResponse
 from openai import OpenAI
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 load_dotenv()
 
@@ -19,13 +20,29 @@ app = FastAPI(title="Learning Path LLM API", version="0.2.0")
 # Vite's local development server. Change or remove this in production.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=["http://localhost:5173", "http://localhost:5174"],
     allow_credentials=False,
     allow_methods=["GET", "POST"],
     allow_headers=["Content-Type"],
 )
 
 Provider = Literal["openai", "gemini"]
+
+
+class UserInputRequest(BaseModel):
+    career_goal: str = Field(min_length=1)
+    current_skill_level: Literal["beginner", "intermediate", "advanced"]
+    working_industry: str = Field(min_length=1)
+    past_experience: str = Field(min_length=1)
+    available_time: int = Field(ge=1, le=168)
+
+    @field_validator("career_goal", "past_experience")
+    @classmethod
+    def require_description(cls, value: str) -> str:
+        value = value.strip()
+        if not any(character.isalpha() for character in value):
+            raise ValueError("Please enter a description containing letters.")
+        return value
 
 
 class PromptRequest(BaseModel):
@@ -59,6 +76,11 @@ class LLMResponse(BaseModel):
 @app.get("/health")
 def health_check():
     return {"status": "ok", "providers": ["openai", "gemini"]}
+
+
+@app.post("/user-input")
+def user_input(request: UserInputRequest):
+    return {"message": "User input received successfully", "data": request}
 
 
 def _openai_response(prompt: str) -> LLMResponse:
