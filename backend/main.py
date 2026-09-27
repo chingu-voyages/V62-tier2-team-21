@@ -35,6 +35,10 @@ class UserInputRequest(BaseModel):
     working_industry: str = Field(min_length=1)
     past_experience: str = Field(min_length=1)
     available_time: int = Field(ge=1, le=168)
+    provider: Provider = Field(
+        default="openai",
+        description="The LLM provider to use to generate the learning path.",
+    )
 
     @field_validator("career_goal", "past_experience")
     @classmethod
@@ -43,6 +47,14 @@ class UserInputRequest(BaseModel):
         if not any(character.isalpha() for character in value):
             raise ValueError("Please enter a description containing letters.")
         return value
+
+
+class UserInputResponse(BaseModel):
+    message: str
+    data: UserInputRequest
+    learning_path: str
+    provider: Provider
+    model: str
 
 
 class PromptRequest(BaseModel):
@@ -78,9 +90,31 @@ def health_check():
     return {"status": "ok", "providers": ["openai", "gemini"]}
 
 
-@app.post("/user-input")
+def build_learning_path_prompt(request: UserInputRequest) -> str:
+    """Turn a user's assessment answers into a prompt for the LLM."""
+    return (
+        "Create a personalized learning path for someone with the following profile:\n"
+        f"- Career goal: {request.career_goal}\n"
+        f"- Current skill level: {request.current_skill_level}\n"
+        f"- Working industry: {request.working_industry}\n"
+        f"- Past experience: {request.past_experience}\n"
+        f"- Available time per week: {request.available_time} hours\n\n"
+        "Provide a structured, actionable learning path with concrete steps and resources."
+    )
+
+
+@app.post("/user-input", response_model=UserInputResponse)
 def user_input(request: UserInputRequest):
-    return {"message": "User input received successfully", "data": request}
+    prompt = build_learning_path_prompt(request)
+    response = create_llm_response(prompt, request.provider)
+
+    return UserInputResponse(
+        message="User input received successfully",
+        data=request,
+        learning_path=response.text,
+        provider=response.provider,
+        model=response.model,
+    )
 
 
 def _openai_response(prompt: str) -> LLMResponse:
