@@ -36,14 +36,7 @@
 .progress-bar {
   height: 100%;
   background-color: #3bb13f;
-  width: 0;
-  animation: progress 3s linear forwards;
-}
-
-@keyframes progress {
-  to {
-    width: 100%;
-  }
+  transition: width 0.1s linear;
 }
 
 .loading-title {
@@ -52,5 +45,9 @@
 }
 
 .loading-message {
+  font-size: 1.8rem;
+}
+
+.loading-percentage {
   font-size: 1.8rem;
 }
