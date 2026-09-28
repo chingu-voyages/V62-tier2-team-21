@@ -1,6 +1,7 @@
 import "./HomePage.css";
 import "bootstrap-icons/font/bootstrap-icons.css";
 import Footer from "../components/layout/Footer";
+import { Link } from "react-router-dom";
 
 export default function HomePage() {
   return (
@@ -11,10 +12,12 @@ export default function HomePage() {
           Welcome! Where do you want your career to go next? <br />
           Start your learning path here.
         </p>
-        <button className="get-started-button">
-          <i className="bi bi-door-open-fill"></i>
-          <p>Get Started</p>
-        </button>
+        <Link to="/form" className="link-to-form">
+          <button className="get-started-button">
+            <i className="bi bi-door-open-fill"></i>
+            <p>Get Started</p>
+          </button>
+        </Link>
       </main>
       <Footer />
     </div>
