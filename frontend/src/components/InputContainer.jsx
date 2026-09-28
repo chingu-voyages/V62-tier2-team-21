@@ -2,6 +2,7 @@ import { useState } from "react";
 import TextAreaInput from "./TextAreaInput";
 import SelectInput from "./SelectInput";
 import NumberInput from "./NumberInput";
+
 import "./InputContainer.css";
 import { validateInput } from "../util/validation";
 import {
@@ -9,7 +10,7 @@ import {
   PASTEXPERIENCE_CHARACTERS_MAX,
 } from "../constants/formConstant";
 
-export default function InputContainer() {
+export default function InputContainer({ isSubmitting, setIsSubmitting }) {
   const [inputData, setInputData] = useState({
     careerGoal: "",
     pastExperience: "",
@@ -21,8 +22,6 @@ export default function InputContainer() {
   });
 
   const [submitError, setSubmitError] = useState(null);
-
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   //TODO: send to backend
   async function sendData(enteredData) {
@@ -45,7 +44,7 @@ export default function InputContainer() {
       setSubmitError(err.message);
       return false;
     } finally {
-      setIsSubmitting(false);
+      // setIsSubmitting(false);
     }
   }
 
@@ -116,103 +115,108 @@ export default function InputContainer() {
   const pastExperienceCharacterCount = inputData.pastExperience.length;
 
   return (
-    <form onSubmit={handleSubmit} className="input-container">
-      <h2 className="input-container-title">Career & Skill Assessment Form</h2>
-      <TextAreaInput
-        id="careerGoal"
-        title="1. Career Goal"
-        description={
-          <>
-            Describe the professional role, position, or industry you aim to
-            achieve in the future.
-          </>
-        }
-        placeholder="e.g., To become a Lead Product Manager..."
-        maxCharacters={CAREERGOAL_CHARACTERS_MAX}
-        maxLength={CAREERGOAL_CHARACTERS_MAX}
-        required
-        onChange={(e) => handleCount(e, "careerGoal")}
-        characterCount={careerGoalCharacterCount}
-        inputError={inputError}
-      />
+    <>
+      <form onSubmit={handleSubmit} className="input-container">
+        <h2 className="input-container-title">
+          Career & Skill Assessment Form
+        </h2>
 
-      <SelectInput
-        id="currentSkillLevel"
-        title="2. Current Skill Level"
-        description="Select current level which you currently level"
-        required
-        defaultValue=""
-      >
-        <option value="" disabled>
-          -- Select your current level --
-        </option>
-        <option value="beginner">Beginner</option>
-        <option value="intermediate">Intermediate</option>
-        <option value="advanced">Advanced</option>
-      </SelectInput>
+        <TextAreaInput
+          id="careerGoal"
+          title="1. Career Goal"
+          description={
+            <>
+              Describe the professional role, position, or industry you aim to
+              achieve in the future.
+            </>
+          }
+          placeholder="e.g., To become a Lead Product Manager..."
+          maxCharacters={CAREERGOAL_CHARACTERS_MAX}
+          maxLength={CAREERGOAL_CHARACTERS_MAX}
+          required
+          onChange={(e) => handleCount(e, "careerGoal")}
+          characterCount={careerGoalCharacterCount}
+          inputError={inputError}
+        />
 
-      <SelectInput
-        id="workingIndustry"
-        title="3. Working Industry"
-        description={
-          <>
-            Select the primary industry in which you currently work or have the
-            most experience.
-          </>
-        }
-        required
-        defaultValue=""
-      >
-        <option value="" disabled>
-          -- Select the industry --
-        </option>
-        <option value="frontend-development">Frontend Development</option>
-        <option value="backend-development">Backend Development</option>
-        <option value="data-science-ml">Data Science/ML</option>
-        <option value="cybersecurity">Cybersecurity</option>
-        <option value="product-management">Product Management</option>
-      </SelectInput>
+        <SelectInput
+          id="currentSkillLevel"
+          title="2. Current Skill Level"
+          description="Select current level which you currently level"
+          required
+          defaultValue=""
+        >
+          <option value="" disabled>
+            -- Select your current level --
+          </option>
+          <option value="beginner">Beginner</option>
+          <option value="intermediate">Intermediate</option>
+          <option value="advanced">Advanced</option>
+        </SelectInput>
 
-      <TextAreaInput
-        id="pastExperience"
-        title="4. Past Experience"
-        description={
-          <>
-            Provide a brief summary of your past education, work experience, or
-            relevant competencies.
-          </>
-        }
-        placeholder="e.g., Bachelor's in Computer Science..."
-        maxCharacters={PASTEXPERIENCE_CHARACTERS_MAX}
-        maxLength={PASTEXPERIENCE_CHARACTERS_MAX}
-        onChange={(e) => handleCount(e, "pastExperience")}
-        characterCount={pastExperienceCharacterCount}
-        inputError={inputError}
-        required
-      />
+        <SelectInput
+          id="workingIndustry"
+          title="3. Working Industry"
+          description={
+            <>
+              Select the primary industry in which you currently work or have
+              the most experience.
+            </>
+          }
+          required
+          defaultValue=""
+        >
+          <option value="" disabled>
+            -- Select the industry --
+          </option>
+          <option value="frontend-development">Frontend Development</option>
+          <option value="backend-development">Backend Development</option>
+          <option value="data-science-ml">Data Science/ML</option>
+          <option value="cybersecurity">Cybersecurity</option>
+          <option value="product-management">Product Management</option>
+        </SelectInput>
 
-      <NumberInput
-        id="availableTime"
-        title="5. Available Time / Time Commitment"
-        description={
-          <>
-            Indicate the average number of hours per week you can dedicate to
-            this program.
-          </>
-        }
-        required
-        min="1"
-        max="168"
-      />
+        <TextAreaInput
+          id="pastExperience"
+          title="4. Past Experience"
+          description={
+            <>
+              Provide a brief summary of your past education, work experience,
+              or relevant competencies.
+            </>
+          }
+          placeholder="e.g., Bachelor's in Computer Science..."
+          maxCharacters={PASTEXPERIENCE_CHARACTERS_MAX}
+          maxLength={PASTEXPERIENCE_CHARACTERS_MAX}
+          onChange={(e) => handleCount(e, "pastExperience")}
+          characterCount={pastExperienceCharacterCount}
+          inputError={inputError}
+          required
+        />
 
-      {submitError && <p>{submitError}</p>}
-      <button
-        type="submit"
-        className="input-submit-button"
-        disabled={isSubmitting}
-      >
-        Submit Information
-      </button>
-    </form>
+        <NumberInput
+          id="availableTime"
+          title="5. Available Time / Time Commitment"
+          description={
+            <>
+              Indicate the average number of hours per week you can dedicate to
+              this program.
+            </>
+          }
+          required
+          min="1"
+          max="168"
+        />
+
+        {submitError && <p>{submitError}</p>}
+        <button
+          type="submit"
+          className="input-submit-button"
+          disabled={isSubmitting}
+        >
+          Submit Information
+        </button>
+      </form>
+    </>
   );
 }
