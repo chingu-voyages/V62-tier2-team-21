@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import TextAreaInput from "./TextAreaInput";
 import SelectInput from "./SelectInput";
 import NumberInput from "./NumberInput";
@@ -10,10 +11,13 @@ import {
 } from "../constants/formConstant";
 
 export default function InputContainer() {
+  const navigate = useNavigate();
+
   const [inputData, setInputData] = useState({
     careerGoal: "",
-    pastExperience: "",
+    pastExperience: ""
   });
+  
 
   const [inputError, setInputError] = useState({
     careerGoal: "",
@@ -27,7 +31,6 @@ export default function InputContainer() {
   const API_URL =
     import.meta.env.VITE_API_URL || "http://localhost:8000";
 
-  //TODO: send to backend
   async function sendData(enteredData) {
     try {
       setIsSubmitting(true);
@@ -40,13 +43,20 @@ export default function InputContainer() {
         body: JSON.stringify(enteredData),
       });
 
+      const body = await response.json();
+
       if (!response.ok) {
-        throw new Error("Failed to submit data");
+        const message =
+          typeof body.detail === "string"
+            ? body.detail
+            : "Failed to submit data";
+        throw new Error(message);
       }
-      return true;
+
+      return body;
     } catch (err) {
       setSubmitError(err.message);
-      return false;
+      return null;
     } finally {
       setIsSubmitting(false);
     }
@@ -96,11 +106,12 @@ export default function InputContainer() {
       available_time: availableTime,
     };
 
-    const success = await sendData(enteredData);
+    const result = await sendData(enteredData);
 
-    //TODO: navigate to a separate page if data submission succeeds
-    if (success) {
-      return;
+    if (result) {
+      navigate("/learning-path", {
+        state: { learningPath: result.learning_path },
+      });
     }
   }
 
