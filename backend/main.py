@@ -10,9 +10,9 @@ from uuid import uuid4
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse
-from openai import OpenAI
+from openai import APITimeoutError, OpenAI, RateLimitError
 from dotenv import load_dotenv
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, TypeAdapter, ValidationError, field_validator
 
 load_dotenv()
 
@@ -55,10 +55,19 @@ class UserInputRequest(BaseModel):
         return value
 
 
+class LearningPathStep(BaseModel):
+    title: str = Field(min_length=1)
+    description: str = Field(min_length=1)
+    estimated_time: str = Field(min_length=1)
+
+
+LearningPathSteps = TypeAdapter(list[LearningPathStep])
+
+
 class UserInputResponse(BaseModel):
     message: str
     data: UserInputRequest
-    learning_path: str
+    learning_path: list[LearningPathStep]
     provider: Provider
     model: str
 
@@ -105,22 +114,54 @@ def build_learning_path_prompt(request: UserInputRequest) -> str:
         f"- Working industry: {request.working_industry}\n"
         f"- Past experience: {request.past_experience}\n"
         f"- Available time per week: {request.available_time} hours\n\n"
-        "Provide a structured, actionable learning path with concrete steps and resources.\n\n"
-        "Limit the response to at most 300 words. Provide 4-5 steps, each with a "
-        "1-2 sentence explanation and at most 2 resources. Do not include an "
-        "introduction or closing paragraph."
+        "Respond with ONLY a JSON array (no markdown, no surrounding text) of "
+        "4-5 learning path steps. Each element must be an object with exactly "
+        "these string fields: \"title\", \"description\" (1-2 sentences), and "
+        "\"estimated_time\" (e.g. \"2 weeks\"). Example:\n"
+        '[{"title": "...", "description": "...", "estimated_time": "2 weeks"}]'
     )
+
+
+def parse_learning_path(text: str) -> list[LearningPathStep]:
+    """Validate and parse the AI's raw text into structured learning path steps."""
+    text = text.strip()
+    if text.startswith("```"):
+        text = text.strip("`").removeprefix("json").strip()
+    if not text:
+        raise HTTPException(status_code=502, detail="The AI returned an empty response.")
+
+    try:
+        raw_steps = json.loads(text)
+    except json.JSONDecodeError as error:
+        logger.exception("AI response was not valid JSON")
+        raise HTTPException(
+            status_code=502, detail="The AI returned a malformed response."
+        ) from error
+
+    try:
+        steps = LearningPathSteps.validate_python(raw_steps)
+    except ValidationError as error:
+        logger.exception("AI response did not match the expected learning path shape")
+        raise HTTPException(
+            status_code=502, detail="The AI returned a malformed response."
+        ) from error
+
+    if not steps:
+        raise HTTPException(status_code=502, detail="The AI returned an empty response.")
+
+    return steps
 
 
 @app.post("/user-input", response_model=UserInputResponse)
 def user_input(request: UserInputRequest):
     prompt = build_learning_path_prompt(request)
     response = create_llm_response(prompt, request.provider)
+    learning_path = parse_learning_path(response.text)
 
     return UserInputResponse(
         message="User input received successfully",
         data=request,
-        learning_path=response.text,
+        learning_path=learning_path,
         provider=response.provider,
         model=response.model,
     )
@@ -142,6 +183,16 @@ def _openai_response(prompt: str) -> LLMResponse:
             max_output_tokens=MAX_OUTPUT_TOKENS,
             reasoning={"effort": "low"},
         )
+    except RateLimitError as error:
+        logger.exception("OpenAI request was rate limited")
+        raise HTTPException(
+            status_code=429, detail="The OpenAI service is rate-limited. Please try again shortly."
+        ) from error
+    except APITimeoutError as error:
+        logger.exception("OpenAI request timed out")
+        raise HTTPException(
+            status_code=504, detail="The OpenAI service timed out."
+        ) from error
     except Exception as error:
         logger.exception("OpenAI request failed")
         raise HTTPException(
@@ -206,10 +257,29 @@ def _gemini_response(prompt: str) -> LLMResponse:
                 time.sleep(1)
                 continue
             logger.exception("Gemini request failed")
+            if error.code == 429:
+                raise HTTPException(
+                    status_code=429,
+                    detail="The Gemini service is rate-limited. Please try again shortly.",
+                ) from error
             raise HTTPException(
                 status_code=502, detail="The Gemini service is temporarily unavailable."
             ) from error
-        except (urllib.error.URLError, json.JSONDecodeError) as error:
+        except TimeoutError as error:
+            logger.exception("Gemini request timed out")
+            raise HTTPException(
+                status_code=504, detail="The Gemini service timed out."
+            ) from error
+        except urllib.error.URLError as error:
+            logger.exception("Gemini request failed")
+            if isinstance(error.reason, TimeoutError):
+                raise HTTPException(
+                    status_code=504, detail="The Gemini service timed out."
+                ) from error
+            raise HTTPException(
+                status_code=502, detail="The Gemini service is temporarily unavailable."
+            ) from error
+        except json.JSONDecodeError as error:
             logger.exception("Gemini request failed")
             raise HTTPException(
                 status_code=502, detail="The Gemini service is temporarily unavailable."

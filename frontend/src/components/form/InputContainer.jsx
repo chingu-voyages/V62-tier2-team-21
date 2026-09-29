@@ -1,16 +1,23 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import TextAreaInput from "./TextAreaInput";
 import SelectInput from "./SelectInput";
 import NumberInput from "./NumberInput";
 
 import "./InputContainer.css";
-import { validateInput } from "../util/validation";
+import { validateInput } from "../../util/validation";
 import {
   CAREERGOAL_CHARACTERS_MAX,
   PASTEXPERIENCE_CHARACTERS_MAX,
-} from "../constants/formConstant";
+} from "../../constants/formConstant";
 
-export default function InputContainer({ isSubmitting, setIsSubmitting }) {
+export default function InputContainer({
+  isSubmitting,
+  setIsSubmitting,
+  setGenerationError,
+}) {
+  const navigate = useNavigate();
+
   const [inputData, setInputData] = useState({
     careerGoal: "",
     pastExperience: "",
@@ -21,32 +28,45 @@ export default function InputContainer({ isSubmitting, setIsSubmitting }) {
     pastExperience: "",
   });
 
-  const [submitError, setSubmitError] = useState(null);
-
   const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
-  //TODO: send to backend
   async function sendData(enteredData) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
+      controller.abort();
+    }, 10000);
     try {
       setIsSubmitting(true);
-      setSubmitError(null);
+      setGenerationError(null);
       const response = await fetch(`${API_URL}/user-input`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(enteredData),
+        signal: controller.signal,
       });
 
+      const body = await response.json();
+
       if (!response.ok) {
-        throw new Error("Failed to submit data");
+        const message =
+          typeof body.detail === "string"
+            ? body.detail
+            : "Failed to submit data";
+        throw new Error(message);
       }
-      return true;
+
+      return body;
     } catch (err) {
-      setSubmitError(err.message);
-      return false;
+      if (err.name === "AbortError") {
+        setGenerationError("Request timed out");
+      } else {
+        setGenerationError(err.message);
+      }
+      return null;
     } finally {
-      // setIsSubmitting(false);
+      clearTimeout(timeoutId);
     }
   }
 
@@ -78,14 +98,6 @@ export default function InputContainer({ isSubmitting, setIsSubmitting }) {
       pastExperience: "",
     });
 
-    console.log(
-      careerGoal,
-      currentSkillLevel,
-      workingIndustry,
-      pastExperience,
-      availableTime,
-    );
-
     const enteredData = {
       career_goal: careerGoal,
       current_skill_level: currentSkillLevel,
@@ -94,11 +106,12 @@ export default function InputContainer({ isSubmitting, setIsSubmitting }) {
       available_time: availableTime,
     };
 
-    const success = await sendData(enteredData);
+    const result = await sendData(enteredData);
 
-    //TODO: navigate to a separate page if data submission succeeds
-    if (success) {
-      return;
+    if (result) {
+      navigate("/learning-path", {
+        state: { learningPath: result.learning_path },
+      });
     }
   }
 
@@ -210,7 +223,6 @@ export default function InputContainer({ isSubmitting, setIsSubmitting }) {
           max="168"
         />
 
-        {submitError && <p>{submitError}</p>}
         <button
           type="submit"
           className="input-submit-button"

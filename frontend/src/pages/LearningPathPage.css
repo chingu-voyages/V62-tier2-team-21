@@ -1,0 +1,56 @@
+.learning-path-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background-color: #faf6eb;
+}
+
+.learning-path-container {
+  font-family: "Roboto", sans-serif;
+  margin-top: 3rem;
+  margin-bottom: 3rem;
+
+  padding: 3rem;
+  border-radius: 6px;
+
+  background-color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  gap: 1.6rem;
+
+  width: 90%;
+  max-width: 60rem;
+}
+
+.learning-path-title {
+  align-self: center;
+  font-size: 2.4rem;
+  margin-bottom: 1.6rem;
+  font-weight: 700;
+  color: #315041;
+}
+
+.learning-path-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  padding-left: 2rem;
+}
+
+.learning-path-step-title {
+  font-size: 1.8rem;
+  color: #315041;
+  margin-bottom: 0.4rem;
+}
+
+.learning-path-step-description {
+  font-size: 1.4rem;
+  color: #333333;
+  margin-bottom: 0.4rem;
+}
+
+.learning-path-step-time {
+  font-size: 1.2rem;
+  font-style: italic;
+  color: #556b5f;
+}
