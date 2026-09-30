@@ -23,10 +23,18 @@ MAX_OUTPUT_TOKENS = int(os.getenv("LLM_MAX_OUTPUT_TOKENS", "2000"))
 
 app = FastAPI(title="Learning Path LLM API", version="0.2.0")
 
-# Vite's local development server. Change or remove this in production.
+# Defaults cover Vite's local dev server; add the deployed frontend's origin(s)
+# via the ALLOWED_ORIGINS env var (comma-separated) instead of editing this list.
+DEFAULT_ALLOWED_ORIGINS = "http://localhost:5173,http://localhost:5174"
+allowed_origins = [
+    origin.strip()
+    for origin in os.getenv("ALLOWED_ORIGINS", DEFAULT_ALLOWED_ORIGINS).split(",")
+    if origin.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:5174"],
+    allow_origins=allowed_origins,
     allow_credentials=False,
     allow_methods=["GET", "POST"],
     allow_headers=["Content-Type"],
