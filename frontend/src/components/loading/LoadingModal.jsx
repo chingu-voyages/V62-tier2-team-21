@@ -30,7 +30,10 @@ export default function LoadingModal({ generationError, handleCloseModal }) {
         className={`center-container ${generationError ? "error-container" : ""}`}
       >
         {generationError ? (
-          <ErrorContent handleCloseModal={handleCloseModal} />
+          <ErrorContent
+            handleCloseModal={handleCloseModal}
+            generationError={generationError}
+          />
         ) : (
           <LoadingContent percentage={percentage} />
         )}
