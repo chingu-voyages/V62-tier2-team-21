@@ -43,3 +43,7 @@
   background-color: #263f33;
   transform: translateY(1px);
 }
+
+.field-set {
+  border: none;
+}
