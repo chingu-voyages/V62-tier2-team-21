@@ -23,10 +23,18 @@ MAX_OUTPUT_TOKENS = int(os.getenv("LLM_MAX_OUTPUT_TOKENS", "2000"))
 
 app = FastAPI(title="Learning Path LLM API", version="0.2.0")
 
-# Vite's local development server. Change or remove this in production.
+# Defaults cover Vite's local dev server; add the deployed frontend's origin(s)
+# via the ALLOWED_ORIGINS env var (comma-separated) instead of editing this list.
+DEFAULT_ALLOWED_ORIGINS = "http://localhost:5173,http://localhost:5174"
+allowed_origins = [
+    origin.strip()
+    for origin in os.getenv("ALLOWED_ORIGINS", DEFAULT_ALLOWED_ORIGINS).split(",")
+    if origin.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:5174"],
+    allow_origins=allowed_origins,
     allow_credentials=False,
     allow_methods=["GET", "POST"],
     allow_headers=["Content-Type"],
@@ -108,17 +116,21 @@ def health_check():
 def build_learning_path_prompt(request: UserInputRequest) -> str:
     """Turn a user's assessment answers into a prompt for the LLM."""
     return (
-        "Create a personalized learning path for someone with the following profile:\n"
+        "Create a personalized 6-month learning path for someone with the "
+        "following profile:\n"
         f"- Career goal: {request.career_goal}\n"
         f"- Current skill level: {request.current_skill_level}\n"
         f"- Working industry: {request.working_industry}\n"
         f"- Past experience: {request.past_experience}\n"
         f"- Available time per week: {request.available_time} hours\n\n"
-        "Respond with ONLY a JSON array (no markdown, no surrounding text) of "
-        "4-5 learning path steps. Each element must be an object with exactly "
-        "these string fields: \"title\", \"description\" (1-2 sentences), and "
-        "\"estimated_time\" (e.g. \"2 weeks\"). Example:\n"
-        '[{"title": "...", "description": "...", "estimated_time": "2 weeks"}]'
+        "The plan must cover a total duration of approximately 6 months, "
+        "broken into sequential learning steps whose estimated_time values "
+        "add up to roughly 6 months. Respond with ONLY a JSON array (no "
+        "markdown, no surrounding text) of learning path steps. Each element "
+        "must be an object with exactly these string fields: \"title\", "
+        "\"description\" (1-2 sentences), and \"estimated_time\" (e.g. "
+        "\"3 weeks\"). Example:\n"
+        '[{"title": "...", "description": "...", "estimated_time": "3 weeks"}]'
     )
 
 

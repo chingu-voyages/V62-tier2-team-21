@@ -1,6 +1,5 @@
 import { Navigate, useLocation } from "react-router-dom";
 import "./LearningPathPage.css";
-import Footer from "../components/layout/Footer";
 
 export default function LearningPathPage() {
   const location = useLocation();
@@ -12,7 +11,7 @@ export default function LearningPathPage() {
 
   return (
     <div className="learning-path-page">
-      <main className="learning-path-container">
+      <div className="learning-path-container">
         <h2 className="learning-path-title">Your Learning Path</h2>
         <ol className="learning-path-steps">
           {learningPath.map((step, index) => (
@@ -27,8 +26,7 @@ export default function LearningPathPage() {
             </li>
           ))}
         </ol>
-      </main>
-      <Footer />
+      </div>
     </div>
   );
 }

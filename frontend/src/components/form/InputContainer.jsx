@@ -9,7 +9,6 @@ import { validateInput } from "../../util/validation";
 import {
   CAREERGOAL_CHARACTERS_MAX,
   PASTEXPERIENCE_CHARACTERS_MAX,
-  TIMEOUT_SECONDS,
 } from "../../constants/formConstant";
 
 export default function InputContainer({
@@ -35,7 +34,7 @@ export default function InputContainer({
     const controller = new AbortController();
     const timeoutId = setTimeout(() => {
       controller.abort();
-    }, TIMEOUT_SECONDS * 1000);
+    }, 20000);
     try {
       setIsSubmitting(true);
       setGenerationError(null);

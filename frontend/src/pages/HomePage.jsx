@@ -1,14 +1,13 @@
 import { useNavigate } from "react-router-dom";
 import "./HomePage.css";
 import "bootstrap-icons/font/bootstrap-icons.css";
-import Footer from "../components/layout/Footer";
 
 export default function HomePage() {
   const navigate = useNavigate();
 
   return (
     <div className="home-page">
-      <main className="hero">
+      <div className="hero">
         <h1 className="hero-title">Learning Path to Career</h1>
         <p className="hero-description">
           Welcome! Where do you want your career to go next? <br />
@@ -21,8 +20,7 @@ export default function HomePage() {
           <i className="bi bi-door-open-fill"></i>
           <p>Get Started</p>
         </button>
-      </main>
-      <Footer />
+      </div>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import InputContainer from "../components/form/InputContainer";
 import "./FormPage.css";
-import Footer from "../components/layout/Footer";
+
 import LoadingModal from "../components/loading/LoadingModal";
 import { useState } from "react";
 
@@ -26,7 +26,6 @@ export default function FormPage() {
           setIsSubmitting={setIsSubmitting}
           setGenerationError={setGenerationError}
         />
-        <Footer />
       </div>
     </>
   );
