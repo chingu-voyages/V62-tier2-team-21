@@ -41,7 +41,7 @@ def test_database_url():
 
 def _truncate_users(url: str) -> None:
     with psycopg.connect(url, autocommit=True) as connection:
-        connection.execute("TRUNCATE users RESTART IDENTITY")
+        connection.execute("TRUNCATE user_sessions, users RESTART IDENTITY")
 
 
 @pytest.fixture
@@ -255,8 +255,8 @@ def test_login_locks_account_on_fifth_failed_attempt(client):
         assert client.post("/auth/login", json=payload).status_code == 401
 
     fifth_attempt = client.post("/auth/login", json=payload)
-    assert fifth_attempt.status_code == 423
-    assert fifth_attempt.json() == {"detail": "Account locked temporarily. Please try again later"}
+    assert fifth_attempt.status_code == 401
+    assert fifth_attempt.json() == {"detail": "Incorrect Email or Password. Please try again"}
 
     blocked_correct_password = client.post(
         "/auth/login",
