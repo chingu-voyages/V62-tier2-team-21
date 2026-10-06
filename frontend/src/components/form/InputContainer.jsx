@@ -50,6 +50,12 @@ export default function InputContainer({
       const body = await response.json();
 
       if (!response.ok) {
+        if (response.status === 429) {
+          const limitError = new Error("Daily generation limit reached");
+          limitError.code = "daily-limit";
+          throw limitError;
+        }
+
         const message =
           typeof body.detail === "string"
             ? body.detail
@@ -61,6 +67,8 @@ export default function InputContainer({
     } catch (err) {
       if (err.name === "AbortError") {
         setGenerationError("Request timed out");
+      } else if (err.code === "daily-limit") {
+        setGenerationError("limit");
       } else {
         setGenerationError(err.message);
       }

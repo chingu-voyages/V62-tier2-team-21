@@ -6,6 +6,8 @@ import secrets
 import time
 import urllib.error
 import urllib.request
+from datetime import datetime, timezone
+from threading import Lock
 from typing import Literal
 from uuid import uuid4
 
@@ -26,12 +28,18 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 MAX_OUTPUT_TOKENS = int(os.getenv("LLM_MAX_OUTPUT_TOKENS", "2000"))
+DAILY_GENERATION_LIMIT = max(1, int(os.getenv("DAILY_GENERATION_LIMIT", "3")))
 DUPLICATE_EMAIL_MESSAGE = "Email linked to existing account. Please try a different email."
 
 # scrypt cost parameters (OWASP-recommended range). Stored inside each hash so they can be tuned later.
 SCRYPT_N = 2**14
 SCRYPT_R = 8
 SCRYPT_P = 1
+
+# The process-local limit is a useful baseline for the deployed serverless app.
+# Use a shared store such as Redis if the app is scaled to multiple instances.
+generation_counts: dict[str, tuple[str, int]] = {}
+generation_counts_lock = Lock()
 
 app = FastAPI(title="Learning Path LLM API", version="0.2.0")
 
@@ -125,6 +133,36 @@ def health_check():
     return {"status": "ok", "providers": ["openai", "gemini"]}
 
 
+def _client_identifier(request: Request) -> str:
+    """Return the originating client IP provided by the hosting proxy."""
+    forwarded_for = request.headers.get("x-forwarded-for")
+    if forwarded_for:
+        return forwarded_for.split(",", maxsplit=1)[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
+def enforce_daily_generation_limit(request: Request) -> None:
+    """Allow a client to generate at most DAILY_GENERATION_LIMIT plans per UTC day."""
+    client_id = _client_identifier(request)
+    today = datetime.now(timezone.utc).date().isoformat()
+
+    with generation_counts_lock:
+        recorded_day, count = generation_counts.get(client_id, (today, 0))
+        if recorded_day != today:
+            count = 0
+
+        if count >= DAILY_GENERATION_LIMIT:
+            raise HTTPException(
+                status_code=429,
+                detail=(
+                    f"Daily generation limit reached ({DAILY_GENERATION_LIMIT}). "
+                    "Please try again tomorrow."
+                ),
+            )
+
+        generation_counts[client_id] = (today, count + 1)
+
+
 def build_learning_path_prompt(request: UserInputRequest) -> str:
     """Turn a user's assessment answers into a prompt for the LLM."""
     return (
@@ -177,7 +215,8 @@ def parse_learning_path(text: str) -> list[LearningPathStep]:
 
 
 @app.post("/user-input", response_model=UserInputResponse)
-def user_input(request: UserInputRequest):
+def user_input(request: UserInputRequest, http_request: Request):
+    enforce_daily_generation_limit(http_request)
     prompt = build_learning_path_prompt(request)
     response = create_llm_response(prompt, request.provider)
     learning_path = parse_learning_path(response.text)
@@ -345,8 +384,9 @@ def create_llm_response(prompt: str, provider: Provider = "openai") -> LLMRespon
 
 
 @app.post("/generate", response_model=GenerateResponse)
-def generate(request: PromptRequest):
+def generate(request: PromptRequest, http_request: Request):
     """Send one user prompt to the LLM and return structured JSON."""
+    enforce_daily_generation_limit(http_request)
     response = create_llm_response(request.prompt, request.provider)
 
     return GenerateResponse(
@@ -358,8 +398,9 @@ def generate(request: PromptRequest):
 
 
 @app.post("/generate/text", response_class=PlainTextResponse)
-def generate_text(request: PromptRequest):
+def generate_text(request: PromptRequest, http_request: Request):
     """Send one user prompt to the LLM and return readable plain text."""
+    enforce_daily_generation_limit(http_request)
     return create_llm_response(request.prompt, request.provider).text
 
 
