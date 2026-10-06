@@ -1,18 +1,24 @@
+import hashlib
 import json
 import logging
 import os
+import secrets
 import time
 import urllib.error
 import urllib.request
 from typing import Literal
 from uuid import uuid4
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.encoders import jsonable_encoder
+from fastapi.exception_handlers import request_validation_exception_handler
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import PlainTextResponse
+from fastapi.responses import JSONResponse, PlainTextResponse
+import psycopg
 from openai import APITimeoutError, OpenAI, RateLimitError
 from dotenv import load_dotenv
-from pydantic import BaseModel, Field, TypeAdapter, ValidationError, field_validator
+from pydantic import BaseModel, EmailStr, Field, TypeAdapter, ValidationError, field_validator
 
 load_dotenv()
 
@@ -20,6 +26,12 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 MAX_OUTPUT_TOKENS = int(os.getenv("LLM_MAX_OUTPUT_TOKENS", "2000"))
+DUPLICATE_EMAIL_MESSAGE = "Email linked to existing account. Please try a different email."
+
+# scrypt cost parameters (OWASP-recommended range). Stored inside each hash so they can be tuned later.
+SCRYPT_N = 2**14
+SCRYPT_R = 8
+SCRYPT_P = 1
 
 app = FastAPI(title="Learning Path LLM API", version="0.2.0")
 
@@ -349,3 +361,108 @@ def generate(request: PromptRequest):
 def generate_text(request: PromptRequest):
     """Send one user prompt to the LLM and return readable plain text."""
     return create_llm_response(request.prompt, request.provider).text
+
+
+class RegisterRequest(BaseModel):
+    full_name: str = Field(min_length=1)
+    email: EmailStr
+    password: str = Field(min_length=8, max_length=128)
+
+    @field_validator("full_name")
+    @classmethod
+    def require_full_name(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("Full name cannot be blank.")
+        return value
+
+    @field_validator("email")
+    @classmethod
+    def normalize_email(cls, value: str) -> str:
+        return value.strip().lower()
+
+
+class UserResponse(BaseModel):
+    """Public user data. Never include password or password_hash here."""
+
+    id: int
+    full_name: str
+    email: str
+
+
+def get_db_connection() -> psycopg.Connection:
+    """Open a connection to PostgreSQL (Supabase Transaction Pooler) for one request.
+
+    prepare_threshold=None disables server-side prepared statements, which the
+    transaction pooler does not support. The schema lives in migrations/, not here.
+    """
+    database_url = os.getenv("DATABASE_URL")
+    if not database_url:
+        raise RuntimeError("DATABASE_URL is not configured.")
+    return psycopg.connect(database_url, connect_timeout=5, prepare_threshold=None)
+
+
+def hash_password(password: str) -> str:
+    """Hash a password with scrypt and a random per-password salt."""
+    salt = secrets.token_bytes(16)
+    digest = hashlib.scrypt(
+        password.encode("utf-8"),
+        salt=salt,
+        n=SCRYPT_N,
+        r=SCRYPT_R,
+        p=SCRYPT_P,
+        dklen=64,
+    )
+    return f"scrypt${SCRYPT_N}${SCRYPT_R}${SCRYPT_P}${salt.hex()}${digest.hex()}"
+
+
+def create_user(request: RegisterRequest) -> UserResponse:
+    """Insert a new user. The UNIQUE constraint on email makes duplicates race-safe."""
+    password_hash = hash_password(request.password)
+
+    try:
+        connection = get_db_connection()
+        try:
+            with connection:
+                row = connection.execute(
+                    "INSERT INTO users (full_name, email, password_hash) "
+                    "VALUES (%s, %s, %s) RETURNING id",
+                    (request.full_name, request.email, password_hash),
+                ).fetchone()
+        finally:
+            connection.close()
+    except psycopg.errors.UniqueViolation as error:
+        raise HTTPException(status_code=409, detail=DUPLICATE_EMAIL_MESSAGE) from error
+    except (psycopg.Error, RuntimeError) as error:
+        logger.exception("Database error while creating user")
+        raise HTTPException(
+            status_code=500, detail="Could not create the account. Please try again later."
+        ) from error
+
+    return UserResponse(
+        id=row[0],
+        full_name=request.full_name,
+        email=request.email,
+    )
+
+
+@app.post("/auth/register", response_model=UserResponse, status_code=201)
+def register(request: RegisterRequest):
+    return create_user(request)
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """Keep FastAPI's 422 format, but drop the echoed "input" for /auth/register.
+
+    Validation errors echo the submitted value, which would return the password.
+    Every other route keeps FastAPI's default handler, so /user-input is unchanged.
+    """
+    if request.url.path != "/auth/register":
+        return await request_validation_exception_handler(request, exc)
+
+    errors = [
+        {key: value for key, value in error.items() if key != "input"}
+        for error in exc.errors()
+    ]
+    return JSONResponse(status_code=422, content=jsonable_encoder({"detail": errors}))
