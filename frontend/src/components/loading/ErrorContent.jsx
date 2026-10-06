@@ -12,6 +12,11 @@ export default function ErrorContent({ handleCloseModal, generationError }) {
       message:
         "We couldn't generate your learning path. Please try again later.",
     },
+    limit: {
+      title: "Daily Limit Reached",
+      message:
+        "You can generate up to 3 learning paths per day. Please try again tomorrow.",
+    },
   };
 
   const content = errorContent[generationError] ?? errorContent.server;
