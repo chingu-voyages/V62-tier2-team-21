@@ -41,7 +41,7 @@ def test_database_url():
 
 def _truncate_users(url: str) -> None:
     with psycopg.connect(url, autocommit=True) as connection:
-        connection.execute("TRUNCATE user_sessions, users RESTART IDENTITY")
+        connection.execute("TRUNCATE login_rate_limits, user_sessions, users RESTART IDENTITY")
 
 
 @pytest.fixture
@@ -262,4 +262,25 @@ def test_login_locks_account_on_fifth_failed_attempt(client):
         "/auth/login",
         json={"email": VALID_USER["email"], "password": VALID_USER["password"]},
     )
-    assert blocked_correct_password.status_code == 423
+    assert blocked_correct_password.status_code == 401
+
+
+def test_expired_lock_resets_failed_attempt_counter(client, database_url):
+    client.post("/auth/register", json=VALID_USER)
+    with psycopg.connect(database_url, autocommit=True) as connection:
+        connection.execute(
+            "UPDATE users SET failed_login_attempts = 5, locked_until = now() - interval '1 minute'"
+        )
+
+    response = client.post(
+        "/auth/login",
+        json={"email": VALID_USER["email"], "password": "wrong-password"},
+    )
+
+    assert response.status_code == 401
+    with psycopg.connect(database_url) as connection:
+        failed_attempts, locked_until = connection.execute(
+            "SELECT failed_login_attempts, locked_until FROM users"
+        ).fetchone()
+    assert failed_attempts == 1
+    assert locked_until is None
