@@ -39,6 +39,8 @@ SCRYPT_P = 1
 SESSION_DURATION = timedelta(days=15)
 MAX_FAILED_LOGIN_ATTEMPTS = 5
 LOCKOUT_DURATION = timedelta(minutes=15)
+LOGIN_RATE_LIMIT = 10
+LOGIN_RATE_LIMIT_WINDOW = timedelta(minutes=15)
 INVALID_CREDENTIALS_MESSAGE = "Incorrect Email or Password. Please try again"
 
 # The process-local limit is a useful baseline for the deployed serverless app.
@@ -62,7 +64,7 @@ app.add_middleware(
     allow_origins=allowed_origins,
     allow_credentials=False,
     allow_methods=["GET", "POST"],
-    allow_headers=["Content-Type"],
+    allow_headers=["Content-Type", "Authorization"],
 )
 
 Provider = Literal["openai", "gemini"]
@@ -505,6 +507,24 @@ def hash_session_token(token: str) -> str:
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
 
+def enforce_login_rate_limit(connection: psycopg.Connection, request: Request) -> None:
+    """Limit login attempts per client across serverless instances."""
+    client_hash = hashlib.sha256(_client_identifier(request).encode("utf-8")).hexdigest()
+    row = connection.execute(
+        "INSERT INTO login_rate_limits (client_hash, window_started_at, attempt_count) "
+        "VALUES (%s, now(), 1) "
+        "ON CONFLICT (client_hash) DO UPDATE SET "
+        "window_started_at = CASE WHEN login_rate_limits.window_started_at <= now() - %s "
+        "THEN now() ELSE login_rate_limits.window_started_at END, "
+        "attempt_count = CASE WHEN login_rate_limits.window_started_at <= now() - %s "
+        "THEN 1 ELSE login_rate_limits.attempt_count + 1 END "
+        "RETURNING attempt_count",
+        (client_hash, LOGIN_RATE_LIMIT_WINDOW, LOGIN_RATE_LIMIT_WINDOW),
+    ).fetchone()
+    if row[0] > LOGIN_RATE_LIMIT:
+        raise HTTPException(status_code=429, detail="Too many login attempts. Please try again later.")
+
+
 def require_session(authorization: str | None = Header(default=None)) -> UserResponse:
     """Resolve an active bearer token to its user, rejecting expired or revoked sessions."""
     if not authorization or not authorization.startswith("Bearer "):
@@ -567,7 +587,7 @@ def register(request: RegisterRequest):
 
 
 @app.post("/auth/login", response_model=SessionResponse)
-def login(request: LoginRequest):
+def login(request: LoginRequest, http_request: Request):
     """Authenticate a user and issue a revocable 15-day bearer session."""
     now = datetime.now(timezone.utc)
     token = secrets.token_urlsafe(32)
@@ -579,6 +599,7 @@ def login(request: LoginRequest):
         connection = get_db_connection()
         try:
             with connection:
+                enforce_login_rate_limit(connection, http_request)
                 row = connection.execute(
                     "SELECT id, full_name, email, password_hash, failed_login_attempts, locked_until "
                     "FROM users WHERE email = %s FOR UPDATE",
@@ -591,6 +612,7 @@ def login(request: LoginRequest):
                 else:
                     user_id, full_name, email, password_hash, failed_attempts, locked_until = row
                     if locked_until and locked_until > now:
+                        verify_password(request.password, DUMMY_PASSWORD_HASH)
                         login_error = HTTPException(status_code=401, detail=INVALID_CREDENTIALS_MESSAGE)
                     else:
                         if locked_until:
@@ -621,7 +643,12 @@ def login(request: LoginRequest):
                                 "INSERT INTO user_sessions (user_id, token_hash, expires_at) VALUES (%s, %s, %s)",
                                 (user_id, hash_session_token(token), expires_at),
                             )
-                            authenticated_user = UserResponse(id=user_id, full_name=full_name, email=email)
+                        authenticated_user = UserResponse(id=user_id, full_name=full_name, email=email)
+                connection.execute(
+                    "DELETE FROM user_sessions WHERE expires_at <= now() OR "
+                    "(revoked_at IS NOT NULL AND revoked_at < now() - %s)",
+                    (SESSION_DURATION,),
+                )
         finally:
             connection.close()
     except (psycopg.Error, RuntimeError) as error:
@@ -658,6 +685,24 @@ def logout(authorization: str | None = Header(default=None)):
             connection.close()
     except (psycopg.Error, RuntimeError) as error:
         logger.exception("Database error while logging out")
+        raise HTTPException(status_code=500, detail="Could not log out. Please try again later.") from error
+
+
+@app.post("/auth/logout-all", status_code=204)
+def logout_all(user: UserResponse = Depends(require_session)):
+    """Revoke every active session for the authenticated user."""
+    try:
+        connection = get_db_connection()
+        try:
+            with connection:
+                connection.execute(
+                    "UPDATE user_sessions SET revoked_at = now() WHERE user_id = %s AND revoked_at IS NULL",
+                    (user.id,),
+                )
+        finally:
+            connection.close()
+    except (psycopg.Error, RuntimeError) as error:
+        logger.exception("Database error while revoking all sessions")
         raise HTTPException(status_code=500, detail="Could not log out. Please try again later.") from error
 
 
