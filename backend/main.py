@@ -141,10 +141,10 @@ def health_check():
 
 
 def _client_identifier(request: Request) -> str:
-    """Return the originating client IP provided by the hosting proxy."""
-    forwarded_for = request.headers.get("x-forwarded-for")
-    if forwarded_for:
-        return forwarded_for.split(",", maxsplit=1)[0].strip()
+    """Return Vercel's trusted client IP, with a safe local-development fallback."""
+    vercel_forwarded_for = request.headers.get("x-vercel-forwarded-for")
+    if vercel_forwarded_for:
+        return vercel_forwarded_for
     return request.client.host if request.client else "unknown"
 
 
@@ -507,9 +507,11 @@ def hash_session_token(token: str) -> str:
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
 
-def enforce_login_rate_limit(connection: psycopg.Connection, request: Request) -> None:
-    """Limit login attempts per client across serverless instances."""
-    client_hash = hashlib.sha256(_client_identifier(request).encode("utf-8")).hexdigest()
+def enforce_auth_rate_limit(
+    connection: psycopg.Connection, request: Request, scope: str
+) -> None:
+    """Limit authentication attempts per client and action across serverless instances."""
+    client_hash = hashlib.sha256(f"{scope}:{_client_identifier(request)}".encode("utf-8")).hexdigest()
     row = connection.execute(
         "INSERT INTO login_rate_limits (client_hash, window_started_at, attempt_count) "
         "VALUES (%s, now(), 1) "
@@ -582,7 +584,19 @@ def create_user(request: RegisterRequest) -> UserResponse:
 
 
 @app.post("/auth/register", response_model=UserResponse, status_code=201)
-def register(request: RegisterRequest):
+def register(request: RegisterRequest, http_request: Request):
+    try:
+        connection = get_db_connection()
+        try:
+            with connection:
+                enforce_auth_rate_limit(connection, http_request, "register")
+        finally:
+            connection.close()
+    except HTTPException:
+        raise
+    except (psycopg.Error, RuntimeError) as error:
+        logger.exception("Database error while rate limiting registration")
+        raise HTTPException(status_code=500, detail="Could not create the account. Please try again later.") from error
     return create_user(request)
 
 
@@ -599,7 +613,7 @@ def login(request: LoginRequest, http_request: Request):
         connection = get_db_connection()
         try:
             with connection:
-                enforce_login_rate_limit(connection, http_request)
+                enforce_auth_rate_limit(connection, http_request, "login")
                 row = connection.execute(
                     "SELECT id, full_name, email, password_hash, failed_login_attempts, locked_until "
                     "FROM users WHERE email = %s FOR UPDATE",

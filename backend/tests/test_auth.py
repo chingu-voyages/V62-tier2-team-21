@@ -2,6 +2,7 @@ import hashlib
 import os
 import re
 from pathlib import Path
+from urllib.parse import urlparse
 
 import psycopg
 import pytest
@@ -33,6 +34,8 @@ def test_database_url():
         pytest.fail(
             "TEST_DATABASE_URL must not equal DATABASE_URL: the tests truncate the users table."
         )
+    if urlparse(url).hostname not in {"localhost", "127.0.0.1", "::1"}:
+        pytest.fail("TEST_DATABASE_URL must point to a local disposable PostgreSQL instance.")
     with psycopg.connect(url) as connection:
         for migration_path in MIGRATION_PATHS:
             connection.execute(migration_path.read_text(encoding="utf-8"))
