@@ -40,7 +40,6 @@ SESSION_DURATION = timedelta(days=15)
 MAX_FAILED_LOGIN_ATTEMPTS = 5
 LOCKOUT_DURATION = timedelta(minutes=15)
 INVALID_CREDENTIALS_MESSAGE = "Incorrect Email or Password. Please try again"
-ACCOUNT_LOCKED_MESSAGE = "Account locked temporarily. Please try again later"
 
 # The process-local limit is a useful baseline for the deployed serverless app.
 # Use a shared store such as Redis if the app is scaled to multiple instances.
@@ -498,6 +497,10 @@ def verify_password(password: str, stored_hash: str) -> bool:
         return False
 
 
+# Verify absent users against a valid hash to reduce account-enumeration timing differences.
+DUMMY_PASSWORD_HASH = hash_password("not-a-real-password")
+
+
 def hash_session_token(token: str) -> str:
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
@@ -583,35 +586,42 @@ def login(request: LoginRequest):
                 ).fetchone()
 
                 if not row:
+                    verify_password(request.password, DUMMY_PASSWORD_HASH)
                     login_error = HTTPException(status_code=401, detail=INVALID_CREDENTIALS_MESSAGE)
                 else:
                     user_id, full_name, email, password_hash, failed_attempts, locked_until = row
                     if locked_until and locked_until > now:
-                        login_error = HTTPException(status_code=423, detail=ACCOUNT_LOCKED_MESSAGE)
-                    elif not verify_password(request.password, password_hash):
-                        failed_attempts += 1
-                        if failed_attempts >= MAX_FAILED_LOGIN_ATTEMPTS:
+                        login_error = HTTPException(status_code=401, detail=INVALID_CREDENTIALS_MESSAGE)
+                    else:
+                        if locked_until:
+                            failed_attempts = 0
                             connection.execute(
-                                "UPDATE users SET failed_login_attempts = %s, locked_until = %s WHERE id = %s",
-                                (failed_attempts, now + LOCKOUT_DURATION, user_id),
+                                "UPDATE users SET failed_login_attempts = 0, locked_until = NULL WHERE id = %s",
+                                (user_id,),
                             )
-                            login_error = HTTPException(status_code=423, detail=ACCOUNT_LOCKED_MESSAGE)
+                        if not verify_password(request.password, password_hash):
+                            failed_attempts += 1
+                            if failed_attempts >= MAX_FAILED_LOGIN_ATTEMPTS:
+                                connection.execute(
+                                    "UPDATE users SET failed_login_attempts = %s, locked_until = %s WHERE id = %s",
+                                    (failed_attempts, now + LOCKOUT_DURATION, user_id),
+                                )
+                            else:
+                                connection.execute(
+                                    "UPDATE users SET failed_login_attempts = %s WHERE id = %s",
+                                    (failed_attempts, user_id),
+                                )
+                            login_error = HTTPException(status_code=401, detail=INVALID_CREDENTIALS_MESSAGE)
                         else:
                             connection.execute(
-                                "UPDATE users SET failed_login_attempts = %s WHERE id = %s",
-                                (failed_attempts, user_id),
+                                "UPDATE users SET failed_login_attempts = 0, locked_until = NULL WHERE id = %s",
+                                (user_id,),
                             )
-                            login_error = HTTPException(status_code=401, detail=INVALID_CREDENTIALS_MESSAGE)
-                    else:
-                        connection.execute(
-                            "UPDATE users SET failed_login_attempts = 0, locked_until = NULL WHERE id = %s",
-                            (user_id,),
-                        )
-                        connection.execute(
-                            "INSERT INTO user_sessions (user_id, token_hash, expires_at) VALUES (%s, %s, %s)",
-                            (user_id, hash_session_token(token), expires_at),
-                        )
-                        authenticated_user = UserResponse(id=user_id, full_name=full_name, email=email)
+                            connection.execute(
+                                "INSERT INTO user_sessions (user_id, token_hash, expires_at) VALUES (%s, %s, %s)",
+                                (user_id, hash_session_token(token), expires_at),
+                            )
+                            authenticated_user = UserResponse(id=user_id, full_name=full_name, email=email)
         finally:
             connection.close()
     except (psycopg.Error, RuntimeError) as error:
