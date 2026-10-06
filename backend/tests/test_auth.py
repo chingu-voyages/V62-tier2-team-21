@@ -12,7 +12,7 @@ import main
 # Captured after `import main` loads backend/.env, so it is the production URL
 # (if configured). Tests must never use it.
 PRODUCTION_DATABASE_URL = os.getenv("DATABASE_URL")
-MIGRATION_PATH = Path(__file__).resolve().parent.parent / "migrations" / "001_create_users.sql"
+MIGRATION_PATHS = sorted((Path(__file__).resolve().parent.parent / "migrations").glob("*.sql"))
 # Port 1 on localhost refuses connections immediately, so no real database is reached.
 UNREACHABLE_DATABASE_URL = "postgresql://invalid:invalid@127.0.0.1:1/none?connect_timeout=2"
 SCRYPT_HASH_PATTERN = re.compile(r"^scrypt\$16384\$8\$1\$[0-9a-f]{32}\$[0-9a-f]{128}$")
@@ -34,7 +34,8 @@ def test_database_url():
             "TEST_DATABASE_URL must not equal DATABASE_URL: the tests truncate the users table."
         )
     with psycopg.connect(url) as connection:
-        connection.execute(MIGRATION_PATH.read_text(encoding="utf-8"))
+        for migration_path in MIGRATION_PATHS:
+            connection.execute(migration_path.read_text(encoding="utf-8"))
     return url
 
 
@@ -206,3 +207,59 @@ def test_health_check_is_unchanged(api_client):
 
     assert response.status_code == 200
     assert response.json() == {"status": "ok", "providers": ["openai", "gemini"]}
+
+
+def test_password_verification_rejects_wrong_or_malformed_hashes():
+    password_hash = main.hash_password(VALID_USER["password"])
+
+    assert main.verify_password(VALID_USER["password"], password_hash)
+    assert not main.verify_password("wrong-password", password_hash)
+    assert not main.verify_password(VALID_USER["password"], "not-a-password-hash")
+
+
+def test_login_creates_session_and_logout_revokes_it(client):
+    client.post("/auth/register", json=VALID_USER)
+
+    login_response = client.post(
+        "/auth/login",
+        json={"email": VALID_USER["email"], "password": VALID_USER["password"]},
+    )
+
+    assert login_response.status_code == 200
+    body = login_response.json()
+    assert body["user"]["email"] == VALID_USER["email"]
+    assert len(body["session_token"]) >= 32
+    headers = {"Authorization": f"Bearer {body['session_token']}"}
+    assert client.get("/auth/me", headers=headers).status_code == 200
+    assert client.post("/auth/logout", headers=headers).status_code == 204
+    assert client.get("/auth/me", headers=headers).status_code == 401
+
+
+def test_login_rejects_invalid_credentials_without_leaking_which_field_failed(client):
+    client.post("/auth/register", json=VALID_USER)
+
+    for payload in (
+        {"email": VALID_USER["email"], "password": "wrong-password"},
+        {"email": "missing@example.com", "password": VALID_USER["password"]},
+    ):
+        response = client.post("/auth/login", json=payload)
+        assert response.status_code == 401
+        assert response.json() == {"detail": "Incorrect Email or Password. Please try again"}
+
+
+def test_login_locks_account_on_fifth_failed_attempt(client):
+    client.post("/auth/register", json=VALID_USER)
+    payload = {"email": VALID_USER["email"], "password": "wrong-password"}
+
+    for _ in range(4):
+        assert client.post("/auth/login", json=payload).status_code == 401
+
+    fifth_attempt = client.post("/auth/login", json=payload)
+    assert fifth_attempt.status_code == 423
+    assert fifth_attempt.json() == {"detail": "Account locked temporarily. Please try again later"}
+
+    blocked_correct_password = client.post(
+        "/auth/login",
+        json={"email": VALID_USER["email"], "password": VALID_USER["password"]},
+    )
+    assert blocked_correct_password.status_code == 423
