@@ -7,10 +7,6 @@
   align-items: center;
 }
 
-.home-header { align-self: stretch; display: flex; justify-content: flex-end; align-items: center; gap: 1.6rem; padding: 2.4rem 4rem; color: #20464e; font-family: Inter, sans-serif; font-size: 1.5rem; }
-.sign-in-button { border: 2px solid #087a53; border-radius: 999px; background: transparent; color: #087a53; cursor: pointer; font: inherit; font-weight: 700; padding: .9rem 1.8rem; }
-.sign-in-button:hover { background: #087a53; color: #fff; }
-
 .hero {
   flex: 1;
 

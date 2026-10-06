@@ -4,8 +4,6 @@ import HomePage from "./pages/HomePage";
 import FormPage from "./pages/FormPage";
 import LearningPathPage from "./pages/LearningPathPage";
 import ErrorPage from "./pages/ErrorPage";
-import LoginPage from "./pages/LoginPage";
-import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 
 export const router = createBrowserRouter([
   {
@@ -15,8 +13,6 @@ export const router = createBrowserRouter([
     children: [
       { index: true, Component: HomePage, id: "home" },
       { path: "form", Component: FormPage, id: "form" },
-      { path: "login", Component: LoginPage, id: "login" },
-      { path: "forgot-password", Component: ForgotPasswordPage, id: "forgot-password" },
       {
         path: "learning-path",
         Component: LearningPathPage,
