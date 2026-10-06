@@ -527,6 +527,18 @@ def enforce_auth_rate_limit(
         raise HTTPException(status_code=429, detail="Too many login attempts. Please try again later.")
 
 
+def clear_successful_auth_attempt(
+    connection: psycopg.Connection, request: Request, scope: str
+) -> None:
+    """Do not penalize a client for a successful authentication."""
+    client_hash = hashlib.sha256(f"{scope}:{_client_identifier(request)}".encode("utf-8")).hexdigest()
+    connection.execute(
+        "UPDATE login_rate_limits SET attempt_count = GREATEST(attempt_count - 1, 0) "
+        "WHERE client_hash = %s",
+        (client_hash,),
+    )
+
+
 def require_session(authorization: str | None = Header(default=None)) -> UserResponse:
     """Resolve an active bearer token to its user, rejecting expired or revoked sessions."""
     if not authorization or not authorization.startswith("Bearer "):
@@ -653,15 +665,20 @@ def login(request: LoginRequest, http_request: Request):
                                 "UPDATE users SET failed_login_attempts = 0, locked_until = NULL WHERE id = %s",
                                 (user_id,),
                             )
-                            connection.execute(
-                                "INSERT INTO user_sessions (user_id, token_hash, expires_at) VALUES (%s, %s, %s)",
-                                (user_id, hash_session_token(token), expires_at),
-                            )
+                        connection.execute(
+                            "INSERT INTO user_sessions (user_id, token_hash, expires_at) VALUES (%s, %s, %s)",
+                            (user_id, hash_session_token(token), expires_at),
+                        )
+                        clear_successful_auth_attempt(connection, http_request, "login")
                         authenticated_user = UserResponse(id=user_id, full_name=full_name, email=email)
                 connection.execute(
                     "DELETE FROM user_sessions WHERE expires_at <= now() OR "
                     "(revoked_at IS NOT NULL AND revoked_at < now() - %s)",
                     (SESSION_DURATION,),
+                )
+                connection.execute(
+                    "DELETE FROM login_rate_limits WHERE window_started_at < now() - %s",
+                    (timedelta(days=1),),
                 )
         finally:
             connection.close()
