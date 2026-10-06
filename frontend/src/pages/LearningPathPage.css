@@ -22,11 +22,23 @@
   max-width: 60rem;
 }
 
+.learning-path-title-container {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
 .learning-path-title {
   align-self: center;
   font-size: 2.4rem;
-  margin-bottom: 1.6rem;
   font-weight: 700;
+  color: #315041;
+}
+
+.learning-path-count {
+  align-self: center;
+  font-size: 1.8rem;
+  margin-bottom: 1.6rem;
   color: #315041;
 }
 
@@ -35,22 +47,34 @@
   flex-direction: column;
   gap: 2rem;
   padding-left: 2rem;
+  list-style: none;
+}
+
+.learning-path-step {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
 }
 
 .learning-path-step-title {
   font-size: 1.8rem;
   color: #315041;
-  margin-bottom: 0.4rem;
+}
+
+.learning-path-check-box {
+  accent-color: #315041;
+  width: 2.2rem;
 }
 
 .learning-path-step-description {
   font-size: 1.4rem;
   color: #333333;
-  margin-bottom: 0.4rem;
+  margin-left: 2rem;
 }
 
 .learning-path-step-time {
   font-size: 1.2rem;
   font-style: italic;
   color: #556b5f;
+  margin-left: 2rem;
 }
