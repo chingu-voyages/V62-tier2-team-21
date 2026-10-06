@@ -128,5 +128,4 @@ You can change the model with the `OPENAI_MODEL` environment variable. The API k
 - Eman: [GitHub](https://github.com/emannaji597) / [LinkedIn](https://www.linkedin.com/in/eman-naji-485203311/)
 - Ahmet: [GitHub](https://www.linkedin.com/in/ahmet-sagdasli) / [LinkedIn](https://github.com/ahmetsagdasli)
 - Zaina Alahmar: [GitHub](https://github.com/ZainaAlahmar) / [LinkedIn](https://www.linkedin.com/in/zaina-alahmar)
-- Sakshi: [GitHub](https://github.com/sakship2204) / [LinkedIn](https://www.linkedin.com/in/sakshi-pandita-88b4741b0/)
 - Chimdindu Nwobodo: [GitHub](https://github.com/chimdisandra) /[LinkedIn](https://www.linkedin.com/in/chimdindu-nwobodo-ba0a75316)
