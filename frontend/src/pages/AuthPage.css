@@ -1,0 +1,17 @@
+.auth-page { min-height: 100vh; background: #faf6eb; display: flex; flex-direction: column; color: #20464e; font-family: Inter, sans-serif; }
+.auth-card { width: min(92%, 44rem); margin: auto; background: #fff; border: 1px solid #d9e4df; border-radius: 1.6rem; padding: 4rem; box-shadow: 0 1.2rem 3rem rgba(32, 70, 78, .12); }
+.auth-card h1 { font-family: "DM Serif Display", serif; font-size: 4.2rem; margin: 2rem 0 1rem; }
+.auth-intro { font-size: 1.6rem; line-height: 1.5; margin-bottom: 2.8rem; }
+.auth-back-link, .forgot-password-link { color: #087a53; font-size: 1.4rem; font-weight: 600; }
+.auth-card form { display: grid; gap: 1rem; }
+.auth-card label { font-size: 1.5rem; font-weight: 600; margin-top: 1rem; }
+.auth-card input { width: 100%; border: 1px solid #9ab5ae; border-radius: .8rem; font: inherit; font-size: 1.6rem; padding: 1.2rem; }
+.auth-card input:focus { outline: 3px solid rgba(27, 197, 139, .25); border-color: #087a53; }
+.password-input-wrap { position: relative; }
+.password-input-wrap input { padding-right: 7rem; }
+.password-toggle { position: absolute; top: 50%; right: .8rem; transform: translateY(-50%); border: 0; color: #087a53; background: transparent; font-weight: 700; cursor: pointer; }
+.forgot-password-link { justify-self: start; margin: .6rem 0 1rem; }
+.auth-error { background: #fff0ee; border-left: .4rem solid #bd3f32; color: #792419; font-size: 1.4rem; line-height: 1.4; padding: 1.1rem; }
+.auth-submit { border: 0; border-radius: 999px; background: #087a53; color: white; cursor: pointer; font: inherit; font-size: 1.7rem; font-weight: 700; margin-top: 1rem; padding: 1.3rem 2rem; }
+.auth-submit:disabled { cursor: wait; opacity: .7; }
+@media (max-width: 480px) { .auth-card { padding: 2.6rem; } .auth-card h1 { font-size: 3.5rem; } }
