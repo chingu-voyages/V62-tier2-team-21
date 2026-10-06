@@ -36,6 +36,7 @@ export default function InputContainer({
     const timeoutId = setTimeout(() => {
       controller.abort();
     }, TIMEOUT_SECONDS * 1000);
+
     try {
       setIsSubmitting(true);
       setGenerationError(null);
