@@ -454,6 +454,16 @@ class SessionResponse(BaseModel):
     expires_at: datetime
 
 
+class SaveLearningPathRequest(BaseModel):
+    items: list[LearningPathStep] = Field(min_length=1)
+
+
+class SavedLearningPathResponse(BaseModel):
+    id: int
+    created_at: datetime
+    items: list[LearningPathStep]
+
+
 def get_db_connection() -> psycopg.Connection:
     """Open a connection to PostgreSQL (Supabase Transaction Pooler) for one request.
 
@@ -735,6 +745,74 @@ def logout_all(user: UserResponse = Depends(require_session)):
     except (psycopg.Error, RuntimeError) as error:
         logger.exception("Database error while revoking all sessions")
         raise HTTPException(status_code=500, detail="Could not log out. Please try again later.") from error
+
+
+@app.post("/learning-path/save", response_model=SavedLearningPathResponse, status_code=201)
+def save_learning_path(request: SaveLearningPathRequest, user: UserResponse = Depends(require_session)):
+    """Save the checked steps of a generated learning path to the user's account."""
+    try:
+        connection = get_db_connection()
+        try:
+            with connection:
+                saved_path_id, created_at = connection.execute(
+                    "INSERT INTO saved_learning_paths (user_id) VALUES (%s) RETURNING id, created_at",
+                    (user.id,),
+                ).fetchone()
+                for step_order, item in enumerate(request.items):
+                    connection.execute(
+                        "INSERT INTO saved_learning_path_items "
+                        "(saved_learning_path_id, step_order, title, description, estimated_time) "
+                        "VALUES (%s, %s, %s, %s, %s)",
+                        (saved_path_id, step_order, item.title, item.description, item.estimated_time),
+                    )
+        finally:
+            connection.close()
+    except (psycopg.Error, RuntimeError) as error:
+        logger.exception("Database error while saving learning path")
+        raise HTTPException(
+            status_code=500, detail="Could not save the learning path. Please try again later."
+        ) from error
+
+    return SavedLearningPathResponse(id=saved_path_id, created_at=created_at, items=request.items)
+
+
+@app.get("/learning-path/saved", response_model=list[SavedLearningPathResponse])
+def list_saved_learning_paths(user: UserResponse = Depends(require_session)):
+    """List the authenticated user's saved learning paths, most recent first."""
+    try:
+        connection = get_db_connection()
+        try:
+            paths = connection.execute(
+                "SELECT id, created_at FROM saved_learning_paths WHERE user_id = %s ORDER BY created_at DESC",
+                (user.id,),
+            ).fetchall()
+
+            result = []
+            for path_id, created_at in paths:
+                items = connection.execute(
+                    "SELECT title, description, estimated_time FROM saved_learning_path_items "
+                    "WHERE saved_learning_path_id = %s ORDER BY step_order",
+                    (path_id,),
+                ).fetchall()
+                result.append(
+                    SavedLearningPathResponse(
+                        id=path_id,
+                        created_at=created_at,
+                        items=[
+                            LearningPathStep(title=title, description=description, estimated_time=estimated_time)
+                            for title, description, estimated_time in items
+                        ],
+                    )
+                )
+        finally:
+            connection.close()
+    except (psycopg.Error, RuntimeError) as error:
+        logger.exception("Database error while listing saved learning paths")
+        raise HTTPException(
+            status_code=500, detail="Could not load saved learning paths. Please try again later."
+        ) from error
+
+    return result
 
 
 @app.exception_handler(RequestValidationError)
