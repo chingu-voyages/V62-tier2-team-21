@@ -15,6 +15,7 @@ export default function LearningPathPage() {
   const [checkedSteps, setCheckedSteps] = useState(
     () => learningPath?.map(() => false) ?? [],
   );
+  const [title, setTitle] = useState("");
   const [saveError, setSaveError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [savedCount, setSavedCount] = useState(null);
@@ -49,7 +50,7 @@ export default function LearningPathPage() {
       const response = await fetch(`${API_URL}/learning-path/save`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...authHeader() },
-        body: JSON.stringify({ items: selectedItems }),
+        body: JSON.stringify({ items: selectedItems, title: title.trim() || null }),
       });
 
       if (response.status === 401) {
@@ -96,6 +97,19 @@ export default function LearningPathPage() {
             </li>
           ))}
         </ol>
+
+        <label className="learning-path-title-input-label" htmlFor="learning-path-save-title">
+          Title or note (optional)
+        </label>
+        <input
+          id="learning-path-save-title"
+          type="text"
+          className="learning-path-title-input"
+          placeholder="e.g. Steps I'm starting with this month"
+          maxLength={200}
+          value={title}
+          onChange={(event) => setTitle(event.target.value)}
+        />
 
         {saveError && <p className="learning-path-error">{saveError}</p>}
         {savedCount !== null && (

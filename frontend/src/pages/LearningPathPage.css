@@ -74,6 +74,33 @@
   margin-left: 2rem;
 }
 
+.learning-path-title-input-label {
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.learning-path-title-input {
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: 0.8rem;
+  color: var(--text);
+  font: inherit;
+  font-size: 1.5rem;
+  padding: 1.1rem 1.2rem;
+}
+
+.learning-path-title-input::placeholder {
+  color: #5c6773;
+}
+
+.learning-path-title-input:focus {
+  outline: 3px solid rgba(27, 197, 139, 0.25);
+  border-color: var(--accent);
+}
+
 .learning-path-error {
   color: var(--danger-text);
   font-size: 1.4rem;
@@ -165,8 +192,128 @@
   padding-top: 0;
 }
 
-.saved-learning-path-batch-date {
-  font-size: 1.5rem;
-  color: var(--muted);
+.saved-learning-path-batch-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.2rem;
   margin-bottom: 1rem;
+}
+
+.saved-learning-path-batch-title {
+  font-size: 1.8rem;
+  color: var(--text);
+  margin-bottom: 0.4rem;
+}
+
+.saved-learning-path-batch-date {
+  font-size: 1.3rem;
+  color: var(--muted);
+}
+
+.saved-learning-path-batch-controls {
+  display: flex;
+  gap: 0.6rem;
+  flex-shrink: 0;
+}
+
+.saved-learning-path-rename-form {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex: 1;
+}
+
+.saved-learning-path-rename-form input {
+  flex: 1;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: 0.6rem;
+  color: var(--text);
+  font: inherit;
+  font-size: 1.5rem;
+  padding: 0.8rem 1rem;
+}
+
+.saved-learning-path-rename-form input:focus {
+  outline: 3px solid rgba(27, 197, 139, 0.25);
+  border-color: var(--accent);
+}
+
+.saved-learning-path-icon-button {
+  border: 1px solid var(--input-border);
+  border-radius: 0.6rem;
+  background: var(--input-bg);
+  color: var(--muted);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  padding: 0.7rem;
+  transition:
+    color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.saved-learning-path-icon-button:hover {
+  color: var(--text);
+  border-color: var(--accent);
+}
+
+.saved-learning-path-icon-button-danger:hover {
+  color: var(--danger-text);
+  border-color: var(--danger);
+}
+
+.saved-learning-path-step-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.danger-zone {
+  border: 1px solid var(--danger);
+  border-radius: 1rem;
+  background: var(--danger-bg);
+  padding: 2rem;
+  margin-top: 1rem;
+}
+
+.danger-zone-title {
+  color: var(--danger-text);
+  font-size: 1.6rem;
+  margin-bottom: 0.6rem;
+}
+
+.danger-zone-description {
+  color: var(--muted);
+  font-size: 1.4rem;
+  margin-bottom: 1.4rem;
+}
+
+.danger-zone-button {
+  border: 1px solid var(--danger);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--danger-text);
+  cursor: pointer;
+  font: inherit;
+  font-size: 1.4rem;
+  font-weight: 700;
+  padding: 1rem 1.8rem;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease;
+}
+
+.danger-zone-button:hover:not(:disabled) {
+  background: var(--danger);
+  color: #2a0a06;
+}
+
+.danger-zone-button:disabled {
+  cursor: wait;
+  opacity: 0.7;
 }

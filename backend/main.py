@@ -456,12 +456,38 @@ class SessionResponse(BaseModel):
 
 class SaveLearningPathRequest(BaseModel):
     items: list[LearningPathStep] = Field(min_length=1)
+    title: str | None = Field(default=None, max_length=200)
+
+    @field_validator("title")
+    @classmethod
+    def blank_title_is_none(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        value = value.strip()
+        return value or None
+
+
+class UpdateSavedLearningPathRequest(BaseModel):
+    title: str | None = Field(default=None, max_length=200)
+
+    @field_validator("title")
+    @classmethod
+    def blank_title_is_none(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        value = value.strip()
+        return value or None
+
+
+class SavedLearningPathItem(LearningPathStep):
+    id: int
 
 
 class SavedLearningPathResponse(BaseModel):
     id: int
     created_at: datetime
-    items: list[LearningPathStep]
+    title: str | None
+    items: list[SavedLearningPathItem]
 
 
 def get_db_connection() -> psycopg.Connection:
@@ -747,6 +773,18 @@ def logout_all(user: UserResponse = Depends(require_session)):
         raise HTTPException(status_code=500, detail="Could not log out. Please try again later.") from error
 
 
+def _load_saved_path_items(connection: psycopg.Connection, path_id: int) -> list[SavedLearningPathItem]:
+    items = connection.execute(
+        "SELECT id, title, description, estimated_time FROM saved_learning_path_items "
+        "WHERE saved_learning_path_id = %s ORDER BY step_order",
+        (path_id,),
+    ).fetchall()
+    return [
+        SavedLearningPathItem(id=item_id, title=title, description=description, estimated_time=estimated_time)
+        for item_id, title, description, estimated_time in items
+    ]
+
+
 @app.post("/learning-path/save", response_model=SavedLearningPathResponse, status_code=201)
 def save_learning_path(request: SaveLearningPathRequest, user: UserResponse = Depends(require_session)):
     """Save the checked steps of a generated learning path to the user's account."""
@@ -754,16 +792,26 @@ def save_learning_path(request: SaveLearningPathRequest, user: UserResponse = De
         connection = get_db_connection()
         try:
             with connection:
-                saved_path_id, created_at = connection.execute(
-                    "INSERT INTO saved_learning_paths (user_id) VALUES (%s) RETURNING id, created_at",
-                    (user.id,),
+                saved_path_id, created_at, title = connection.execute(
+                    "INSERT INTO saved_learning_paths (user_id, title) VALUES (%s, %s) "
+                    "RETURNING id, created_at, title",
+                    (user.id, request.title),
                 ).fetchone()
+                saved_items = []
                 for step_order, item in enumerate(request.items):
-                    connection.execute(
+                    item_id = connection.execute(
                         "INSERT INTO saved_learning_path_items "
                         "(saved_learning_path_id, step_order, title, description, estimated_time) "
-                        "VALUES (%s, %s, %s, %s, %s)",
+                        "VALUES (%s, %s, %s, %s, %s) RETURNING id",
                         (saved_path_id, step_order, item.title, item.description, item.estimated_time),
+                    ).fetchone()[0]
+                    saved_items.append(
+                        SavedLearningPathItem(
+                            id=item_id,
+                            title=item.title,
+                            description=item.description,
+                            estimated_time=item.estimated_time,
+                        )
                     )
         finally:
             connection.close()
@@ -773,7 +821,7 @@ def save_learning_path(request: SaveLearningPathRequest, user: UserResponse = De
             status_code=500, detail="Could not save the learning path. Please try again later."
         ) from error
 
-    return SavedLearningPathResponse(id=saved_path_id, created_at=created_at, items=request.items)
+    return SavedLearningPathResponse(id=saved_path_id, created_at=created_at, title=title, items=saved_items)
 
 
 @app.get("/learning-path/saved", response_model=list[SavedLearningPathResponse])
@@ -783,27 +831,20 @@ def list_saved_learning_paths(user: UserResponse = Depends(require_session)):
         connection = get_db_connection()
         try:
             paths = connection.execute(
-                "SELECT id, created_at FROM saved_learning_paths WHERE user_id = %s ORDER BY created_at DESC",
+                "SELECT id, created_at, title FROM saved_learning_paths "
+                "WHERE user_id = %s ORDER BY created_at DESC",
                 (user.id,),
             ).fetchall()
 
-            result = []
-            for path_id, created_at in paths:
-                items = connection.execute(
-                    "SELECT title, description, estimated_time FROM saved_learning_path_items "
-                    "WHERE saved_learning_path_id = %s ORDER BY step_order",
-                    (path_id,),
-                ).fetchall()
-                result.append(
-                    SavedLearningPathResponse(
-                        id=path_id,
-                        created_at=created_at,
-                        items=[
-                            LearningPathStep(title=title, description=description, estimated_time=estimated_time)
-                            for title, description, estimated_time in items
-                        ],
-                    )
+            result = [
+                SavedLearningPathResponse(
+                    id=path_id,
+                    created_at=created_at,
+                    title=title,
+                    items=_load_saved_path_items(connection, path_id),
                 )
+                for path_id, created_at, title in paths
+            ]
         finally:
             connection.close()
     except (psycopg.Error, RuntimeError) as error:
@@ -813,6 +854,115 @@ def list_saved_learning_paths(user: UserResponse = Depends(require_session)):
         ) from error
 
     return result
+
+
+@app.patch("/learning-path/saved/{saved_path_id}", response_model=SavedLearningPathResponse)
+def rename_saved_learning_path(
+    saved_path_id: int,
+    request: UpdateSavedLearningPathRequest,
+    user: UserResponse = Depends(require_session),
+):
+    """Set or clear the title/note on one of the user's saved learning paths."""
+    try:
+        connection = get_db_connection()
+        try:
+            with connection:
+                row = connection.execute(
+                    "UPDATE saved_learning_paths SET title = %s WHERE id = %s AND user_id = %s "
+                    "RETURNING id, created_at, title",
+                    (request.title, saved_path_id, user.id),
+                ).fetchone()
+                if not row:
+                    raise HTTPException(status_code=404, detail="Saved learning path not found.")
+                path_id, created_at, title = row
+                items = _load_saved_path_items(connection, path_id)
+        finally:
+            connection.close()
+    except HTTPException:
+        raise
+    except (psycopg.Error, RuntimeError) as error:
+        logger.exception("Database error while renaming saved learning path")
+        raise HTTPException(
+            status_code=500, detail="Could not update the saved learning path. Please try again later."
+        ) from error
+
+    return SavedLearningPathResponse(id=path_id, created_at=created_at, title=title, items=items)
+
+
+@app.delete("/learning-path/saved/{saved_path_id}", status_code=204)
+def delete_saved_learning_path(saved_path_id: int, user: UserResponse = Depends(require_session)):
+    """Delete one of the user's saved learning paths, including all of its steps."""
+    try:
+        connection = get_db_connection()
+        try:
+            with connection:
+                row = connection.execute(
+                    "DELETE FROM saved_learning_paths WHERE id = %s AND user_id = %s RETURNING id",
+                    (saved_path_id, user.id),
+                ).fetchone()
+                if not row:
+                    raise HTTPException(status_code=404, detail="Saved learning path not found.")
+        finally:
+            connection.close()
+    except HTTPException:
+        raise
+    except (psycopg.Error, RuntimeError) as error:
+        logger.exception("Database error while deleting saved learning path")
+        raise HTTPException(
+            status_code=500, detail="Could not delete the saved learning path. Please try again later."
+        ) from error
+
+
+@app.delete("/learning-path/saved/{saved_path_id}/items/{item_id}", status_code=204)
+def delete_saved_learning_path_item(
+    saved_path_id: int, item_id: int, user: UserResponse = Depends(require_session)
+):
+    """Remove one step from a saved learning path. Deletes the path too once it's empty."""
+    try:
+        connection = get_db_connection()
+        try:
+            with connection:
+                row = connection.execute(
+                    "DELETE FROM saved_learning_path_items WHERE id = %s AND saved_learning_path_id = %s "
+                    "AND saved_learning_path_id IN (SELECT id FROM saved_learning_paths WHERE user_id = %s) "
+                    "RETURNING id",
+                    (item_id, saved_path_id, user.id),
+                ).fetchone()
+                if not row:
+                    raise HTTPException(status_code=404, detail="Saved learning path step not found.")
+                connection.execute(
+                    "DELETE FROM saved_learning_paths WHERE id = %s AND user_id = %s "
+                    "AND NOT EXISTS ("
+                    "  SELECT 1 FROM saved_learning_path_items WHERE saved_learning_path_id = %s"
+                    ")",
+                    (saved_path_id, user.id, saved_path_id),
+                )
+        finally:
+            connection.close()
+    except HTTPException:
+        raise
+    except (psycopg.Error, RuntimeError) as error:
+        logger.exception("Database error while deleting saved learning path step")
+        raise HTTPException(
+            status_code=500, detail="Could not delete the step. Please try again later."
+        ) from error
+
+
+@app.delete("/auth/account", status_code=204)
+def delete_account(user: UserResponse = Depends(require_session)):
+    """Permanently delete the authenticated user's account and all of their data."""
+    try:
+        connection = get_db_connection()
+        try:
+            with connection:
+                connection.execute("DELETE FROM users WHERE id = %s", (user.id,))
+        finally:
+            connection.close()
+    except (psycopg.Error, RuntimeError) as error:
+        logger.exception("Database error while deleting account")
+        raise HTTPException(
+            status_code=500, detail="Could not delete your account. Please try again later."
+        ) from error
 
 
 @app.exception_handler(RequestValidationError)
