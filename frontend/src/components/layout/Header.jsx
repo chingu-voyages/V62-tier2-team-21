@@ -49,6 +49,9 @@ export default function Header() {
               >
                 Saved Paths
               </button>
+              <button className="app-header-button" onClick={() => navigate("/account")}>
+                Manage Account
+              </button>
               <button className="app-header-button" onClick={handleLogout}>
                 Log Out
               </button>

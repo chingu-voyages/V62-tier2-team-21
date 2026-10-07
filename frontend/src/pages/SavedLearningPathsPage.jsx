@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
+import { Link, Navigate, useLocation } from "react-router-dom";
 import "bootstrap-icons/font/bootstrap-icons.css";
 import "./LearningPathPage.css";
 import Footer from "../components/layout/Footer";
@@ -9,7 +9,6 @@ const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 export default function SavedLearningPathsPage() {
   const location = useLocation();
-  const navigate = useNavigate();
   const session = getSession();
 
   const [savedPaths, setSavedPaths] = useState(null);
@@ -17,7 +16,6 @@ export default function SavedLearningPathsPage() {
   const [sessionExpired, setSessionExpired] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [editingTitle, setEditingTitle] = useState("");
-  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
   function handleUnauthorized() {
     clearSession();
@@ -115,31 +113,6 @@ export default function SavedLearningPathsPage() {
       );
     } catch (requestError) {
       setError(requestError.message);
-    }
-  }
-
-  async function handleDeleteAccount() {
-    if (
-      !window.confirm(
-        "Permanently delete your account and everything you've saved? This cannot be undone.",
-      )
-    ) {
-      return;
-    }
-    setIsDeletingAccount(true);
-    try {
-      const response = await fetch(`${API_URL}/auth/account`, {
-        method: "DELETE",
-        headers: authHeader(),
-      });
-      if (!response.ok && response.status !== 401) {
-        throw new Error("Could not delete your account. Please try again later.");
-      }
-      clearSession();
-      navigate("/", { replace: true });
-    } catch (requestError) {
-      setError(requestError.message);
-      setIsDeletingAccount(false);
     }
   }
 
@@ -253,21 +226,6 @@ export default function SavedLearningPathsPage() {
         <Link className="learning-path-generate-button" to="/form">
           Generate New Learning Path
         </Link>
-
-        <section className="danger-zone">
-          <h3 className="danger-zone-title">Danger Zone</h3>
-          <p className="danger-zone-description">
-            Permanently delete your account and every learning path you've saved.
-          </p>
-          <button
-            type="button"
-            className="danger-zone-button"
-            onClick={handleDeleteAccount}
-            disabled={isDeletingAccount}
-          >
-            {isDeletingAccount ? "Deleting…" : "Delete My Account"}
-          </button>
-        </section>
       </main>
       <Footer />
     </div>
