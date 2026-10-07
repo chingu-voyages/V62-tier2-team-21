@@ -1,4 +1,4 @@
-import { Navigate, useLocation } from "react-router-dom";
+import { Navigate, useLocation, Link } from "react-router-dom";
 import { useState } from "react";
 import "./LearningPathPage.css";
 
@@ -50,6 +50,20 @@ export default function LearningPathPage() {
             </li>
           ))}
         </ul>
+        <div className="learning-path-button-container">
+          <Link to="/form">
+            <button className="learning-path-button">
+              <i class="bi bi-arrow-repeat"></i>
+              Generate New Learning Path
+            </button>
+          </Link>
+          <Link to="/">
+            <button className="learning-path-finish-button learning-path-button">
+              <i class="bi bi-check2"></i>
+              Finish
+            </button>
+          </Link>
+        </div>
       </div>
     </div>
   );
