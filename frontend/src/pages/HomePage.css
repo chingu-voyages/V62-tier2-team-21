@@ -1,41 +1,10 @@
 .home-page {
   background: var(--hero-bg);
-  min-height: 100vh;
+  flex: 1;
 
   display: flex;
   flex-direction: column;
   align-items: center;
-}
-
-.home-header {
-  align-self: stretch;
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  gap: 1.6rem;
-  padding: 2.4rem 4rem;
-  color: var(--text);
-  font-family: "Inter", sans-serif;
-  font-size: 1.5rem;
-}
-
-.sign-in-button {
-  border: 2px solid var(--accent-light);
-  border-radius: 999px;
-  background: transparent;
-  color: var(--accent-light);
-  cursor: pointer;
-  font: inherit;
-  font-weight: 700;
-  padding: 0.9rem 1.8rem;
-  transition:
-    background 0.2s ease,
-    color 0.2s ease;
-}
-
-.sign-in-button:hover {
-  background: var(--accent-gradient);
-  color: #06241a;
 }
 
 .hero {
