@@ -298,6 +298,10 @@ SAMPLE_LEARNING_PATH = [
 ]
 
 
+def _without_ids(items: list[dict]) -> list[dict]:
+    return [{k: v for k, v in item.items() if k != "id"} for item in items]
+
+
 def _auth_headers(client) -> dict:
     client.post("/auth/register", json=VALID_USER)
     login_response = client.post(
@@ -329,7 +333,8 @@ def test_save_learning_path_only_stores_checked_items(client):
 
     assert response.status_code == 201
     body = response.json()
-    assert body["items"] == checked_items
+    assert _without_ids(body["items"]) == checked_items
+    assert all(isinstance(item["id"], int) for item in body["items"])
     assert isinstance(body["id"], int)
 
 
@@ -343,8 +348,8 @@ def test_list_saved_learning_paths_returns_most_recent_first(client):
     assert response.status_code == 200
     body = response.json()
     assert len(body) == 2
-    assert body[0]["items"] == [SAMPLE_LEARNING_PATH[1]]
-    assert body[1]["items"] == [SAMPLE_LEARNING_PATH[0]]
+    assert _without_ids(body[0]["items"]) == [SAMPLE_LEARNING_PATH[1]]
+    assert _without_ids(body[1]["items"]) == [SAMPLE_LEARNING_PATH[0]]
 
 
 def test_saved_learning_paths_are_isolated_per_user(client, database_url):
@@ -362,3 +367,127 @@ def test_saved_learning_paths_are_isolated_per_user(client, database_url):
 
     assert response.status_code == 200
     assert response.json() == []
+
+
+def test_save_learning_path_stores_optional_title(client):
+    headers = _auth_headers(client)
+
+    response = client.post(
+        "/learning-path/save",
+        headers=headers,
+        json={"items": [SAMPLE_LEARNING_PATH[0]], "title": "  My first path  "},
+    )
+
+    assert response.status_code == 201
+    assert response.json()["title"] == "My first path"
+
+
+def test_rename_saved_learning_path(client):
+    headers = _auth_headers(client)
+    saved = client.post(
+        "/learning-path/save", headers=headers, json={"items": [SAMPLE_LEARNING_PATH[0]]}
+    ).json()
+
+    response = client.patch(
+        f"/learning-path/saved/{saved['id']}", headers=headers, json={"title": "Renamed"}
+    )
+
+    assert response.status_code == 200
+    assert response.json()["title"] == "Renamed"
+
+
+def test_rename_saved_learning_path_rejects_other_users(client):
+    headers = _auth_headers(client)
+    saved = client.post(
+        "/learning-path/save", headers=headers, json={"items": [SAMPLE_LEARNING_PATH[0]]}
+    ).json()
+
+    other_user = {**VALID_USER, "email": "other@example.com"}
+    client.post("/auth/register", json=other_user)
+    other_login = client.post(
+        "/auth/login", json={"email": other_user["email"], "password": other_user["password"]}
+    )
+    other_headers = {"Authorization": f"Bearer {other_login.json()['session_token']}"}
+
+    response = client.patch(
+        f"/learning-path/saved/{saved['id']}", headers=other_headers, json={"title": "Hijacked"}
+    )
+
+    assert response.status_code == 404
+
+
+def test_delete_saved_learning_path(client):
+    headers = _auth_headers(client)
+    saved = client.post(
+        "/learning-path/save", headers=headers, json={"items": [SAMPLE_LEARNING_PATH[0]]}
+    ).json()
+
+    response = client.delete(f"/learning-path/saved/{saved['id']}", headers=headers)
+
+    assert response.status_code == 204
+    assert client.get("/learning-path/saved", headers=headers).json() == []
+
+
+def test_delete_saved_learning_path_rejects_other_users(client):
+    headers = _auth_headers(client)
+    saved = client.post(
+        "/learning-path/save", headers=headers, json={"items": [SAMPLE_LEARNING_PATH[0]]}
+    ).json()
+
+    other_user = {**VALID_USER, "email": "other@example.com"}
+    client.post("/auth/register", json=other_user)
+    other_login = client.post(
+        "/auth/login", json={"email": other_user["email"], "password": other_user["password"]}
+    )
+    other_headers = {"Authorization": f"Bearer {other_login.json()['session_token']}"}
+
+    response = client.delete(f"/learning-path/saved/{saved['id']}", headers=other_headers)
+
+    assert response.status_code == 404
+    assert len(client.get("/learning-path/saved", headers=headers).json()) == 1
+
+
+def test_delete_saved_learning_path_item_removes_just_that_step(client):
+    headers = _auth_headers(client)
+    saved = client.post(
+        "/learning-path/save", headers=headers, json={"items": SAMPLE_LEARNING_PATH}
+    ).json()
+    item_id = saved["items"][0]["id"]
+
+    response = client.delete(f"/learning-path/saved/{saved['id']}/items/{item_id}", headers=headers)
+
+    assert response.status_code == 204
+    remaining = client.get("/learning-path/saved", headers=headers).json()
+    assert len(remaining) == 1
+    assert _without_ids(remaining[0]["items"]) == [SAMPLE_LEARNING_PATH[1]]
+
+
+def test_deleting_the_last_item_deletes_the_saved_path(client):
+    headers = _auth_headers(client)
+    saved = client.post(
+        "/learning-path/save", headers=headers, json={"items": [SAMPLE_LEARNING_PATH[0]]}
+    ).json()
+    item_id = saved["items"][0]["id"]
+
+    response = client.delete(f"/learning-path/saved/{saved['id']}/items/{item_id}", headers=headers)
+
+    assert response.status_code == 204
+    assert client.get("/learning-path/saved", headers=headers).json() == []
+
+
+def test_delete_account_cascades_sessions_and_saved_paths(client, database_url):
+    client.post("/auth/register", json=VALID_USER)
+    login = client.post(
+        "/auth/login", json={"email": VALID_USER["email"], "password": VALID_USER["password"]}
+    )
+    headers = {"Authorization": f"Bearer {login.json()['session_token']}"}
+    client.post("/learning-path/save", headers=headers, json={"items": [SAMPLE_LEARNING_PATH[0]]})
+
+    response = client.delete("/auth/account", headers=headers)
+
+    assert response.status_code == 204
+    assert _user_count(database_url) == 0
+    assert client.get("/auth/me", headers=headers).status_code == 401
+    with psycopg.connect(database_url) as connection:
+        assert connection.execute("SELECT count(*) FROM saved_learning_paths").fetchone()[0] == 0
+        assert connection.execute("SELECT count(*) FROM user_sessions").fetchone()[0] == 0

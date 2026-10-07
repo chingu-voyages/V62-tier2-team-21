@@ -10,8 +10,15 @@ const AUTH_ROUTES = ["/login", "/signup", "/forgot-password"];
 export default function Header() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [session, setSession] = useState(() => getSession());
   const onAuthRoute = AUTH_ROUTES.includes(location.pathname);
+
+  // Header lives above the router outlet and never remounts between routes,
+  // so session is read fresh on every render rather than cached in state.
+  // useLocation() already re-renders this on every navigation (e.g. right
+  // after AuthPage saves the session and redirects back); logout needs its
+  // own nudge since it doesn't navigate anywhere.
+  const [, forceRerender] = useState(0);
+  const session = getSession();
 
   async function handleLogout() {
     try {
@@ -21,7 +28,7 @@ export default function Header() {
       });
     } finally {
       clearSession();
-      setSession(null);
+      forceRerender((n) => n + 1);
     }
   }
 
