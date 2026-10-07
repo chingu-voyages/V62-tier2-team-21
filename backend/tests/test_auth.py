@@ -44,7 +44,10 @@ def test_database_url():
 
 def _truncate_users(url: str) -> None:
     with psycopg.connect(url, autocommit=True) as connection:
-        connection.execute("TRUNCATE login_rate_limits, user_sessions, users RESTART IDENTITY")
+        connection.execute(
+            "TRUNCATE login_rate_limits, user_sessions, saved_learning_path_items, "
+            "saved_learning_paths, users RESTART IDENTITY CASCADE"
+        )
 
 
 @pytest.fixture
@@ -287,3 +290,75 @@ def test_expired_lock_resets_failed_attempt_counter(client, database_url):
         ).fetchone()
     assert failed_attempts == 1
     assert locked_until is None
+
+
+SAMPLE_LEARNING_PATH = [
+    {"title": "Step One", "description": "Learn the basics.", "estimated_time": "2 weeks"},
+    {"title": "Step Two", "description": "Go deeper.", "estimated_time": "3 weeks"},
+]
+
+
+def _auth_headers(client) -> dict:
+    client.post("/auth/register", json=VALID_USER)
+    login_response = client.post(
+        "/auth/login",
+        json={"email": VALID_USER["email"], "password": VALID_USER["password"]},
+    )
+    return {"Authorization": f"Bearer {login_response.json()['session_token']}"}
+
+
+def test_save_learning_path_requires_authentication(api_client):
+    response = api_client.post("/learning-path/save", json={"items": SAMPLE_LEARNING_PATH})
+
+    assert response.status_code == 401
+
+
+def test_save_learning_path_rejects_empty_selection(client):
+    headers = _auth_headers(client)
+
+    response = client.post("/learning-path/save", headers=headers, json={"items": []})
+
+    assert response.status_code == 422
+
+
+def test_save_learning_path_only_stores_checked_items(client):
+    headers = _auth_headers(client)
+    checked_items = [SAMPLE_LEARNING_PATH[0]]
+
+    response = client.post("/learning-path/save", headers=headers, json={"items": checked_items})
+
+    assert response.status_code == 201
+    body = response.json()
+    assert body["items"] == checked_items
+    assert isinstance(body["id"], int)
+
+
+def test_list_saved_learning_paths_returns_most_recent_first(client):
+    headers = _auth_headers(client)
+    client.post("/learning-path/save", headers=headers, json={"items": [SAMPLE_LEARNING_PATH[0]]})
+    client.post("/learning-path/save", headers=headers, json={"items": [SAMPLE_LEARNING_PATH[1]]})
+
+    response = client.get("/learning-path/saved", headers=headers)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body) == 2
+    assert body[0]["items"] == [SAMPLE_LEARNING_PATH[1]]
+    assert body[1]["items"] == [SAMPLE_LEARNING_PATH[0]]
+
+
+def test_saved_learning_paths_are_isolated_per_user(client, database_url):
+    headers = _auth_headers(client)
+    client.post("/learning-path/save", headers=headers, json={"items": [SAMPLE_LEARNING_PATH[0]]})
+
+    other_user = {**VALID_USER, "email": "other@example.com"}
+    client.post("/auth/register", json=other_user)
+    other_login = client.post(
+        "/auth/login", json={"email": other_user["email"], "password": other_user["password"]}
+    )
+    other_headers = {"Authorization": f"Bearer {other_login.json()['session_token']}"}
+
+    response = client.get("/learning-path/saved", headers=other_headers)
+
+    assert response.status_code == 200
+    assert response.json() == []
