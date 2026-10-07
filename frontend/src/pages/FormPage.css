@@ -3,5 +3,6 @@
   flex-direction: column;
 
   align-items: center;
-  background-color: #faf6eb;
+  min-height: 100vh;
+  background: var(--hero-bg);
 }
