@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import "./LoadingModal.css";
 import ErrorContent from "./ErrorContent";
 import LoadingContent from "./LoadingContent";
+import { TIMEOUT_SECONDS } from "../../constants/formConstant";
 
 export default function LoadingModal({ generationError, handleCloseModal }) {
   const [percentage, setPercentage] = useState(0);
@@ -19,7 +20,7 @@ export default function LoadingModal({ generationError, handleCloseModal }) {
 
     const timer = setInterval(() => {
       setPercentage((prev) => (prev < 100 ? prev + 1 : 100));
-    }, 100);
+    }, TIMEOUT_SECONDS * 10);
 
     return () => clearInterval(timer);
   }, [percentage]);
