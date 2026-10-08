@@ -58,6 +58,7 @@
   .header-right-division {
     display: none;
   }
+
   .header-right-division.menu-open {
     display: flex;
     flex-direction: column;
