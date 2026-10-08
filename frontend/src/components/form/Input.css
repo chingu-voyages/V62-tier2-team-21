@@ -7,36 +7,23 @@
 .input-title {
   font-size: 1.6rem;
   font-weight: 500;
-  color: var(--text);
 }
 
 .input-description {
   font-size: 1.4rem;
   font-weight: 400;
-  color: var(--muted);
 }
 
 .input-control {
-  background-color: var(--input-bg);
-  border: 1px solid var(--input-border);
-  border-radius: 0.8rem;
-  color: var(--text);
-  font: inherit;
+  background-color: #f4f4f6;
+  border: 1px solid #e4e6e9;
+  border-radius: 4px;
   font-size: 1.4rem;
   font-weight: 400;
   field-sizing: content;
   min-height: 4rem;
   padding: 1rem;
   width: 100%;
-}
-
-.input-control::placeholder {
-  color: #5c6773;
-}
-
-.input-control:focus {
-  outline: 3px solid rgba(27, 197, 139, 0.25);
-  border-color: var(--accent);
 }
 
 select.input-control,
@@ -52,20 +39,20 @@ input .input-control {
 }
 
 .word-count {
-  color: var(--muted);
+  color: #a4a5a7;
   font-weight: 400;
 }
 
 .word-count.word-count-alert,
 .error-message {
-  color: var(--danger-text);
+  color: #e8666a;
   font-weight: 500;
 }
 
 .input-control.word-count-alert:focus {
-  outline-color: var(--danger);
+  outline-color: #e8666a;
 }
 
 .input-control.word-count-alert {
-  border: 1px solid var(--danger);
+  border: 1px solid #e8666a;
 }

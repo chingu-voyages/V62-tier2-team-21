@@ -9,9 +9,8 @@
 }
 
 .team-footer {
-  color: var(--muted);
+  color: #1f2725;
   font-size: 1.4rem;
   text-align: center;
   padding: 2rem;
 }
-
