@@ -4,11 +4,9 @@
   margin-bottom: 3rem;
 
   padding: 3rem;
-  border-radius: 1.6rem;
+  border-radius: 6px;
 
-  background-color: var(--surface);
-  border: 1px solid var(--border);
-  box-shadow: 0 2rem 5rem rgba(0, 0, 0, 0.45);
+  background-color: #ffffff;
   display: flex;
   flex-direction: column;
   gap: 3rem;
@@ -22,38 +20,28 @@
   font-size: 2.4rem;
   margin-bottom: 1.6rem;
   font-weight: 700;
-  color: var(--text);
+  color: #315041;
 }
 
 .input-submit-button {
-  background: var(--accent-gradient);
-  color: #06241a;
-  border-radius: 999px;
+  background-color: #315041;
+  color: #ffffff;
+  border-radius: 8px;
   font-size: 1.6rem;
-  font-weight: 700;
   border: none;
   padding: 1.2rem 3.6rem;
   margin-top: 3rem;
   align-self: flex-end;
   cursor: pointer;
-  box-shadow: 0 0.8rem 2rem rgba(27, 197, 139, 0.25);
-  transition:
-    transform 0.2s ease,
-    box-shadow 0.2s ease;
 }
 
 .input-submit-button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 1.2rem 2.4rem rgba(27, 197, 139, 0.32);
+  background-color: #406653;
 }
 
 .input-submit-button:active {
+  background-color: #263f33;
   transform: translateY(1px);
-}
-
-.input-submit-button:disabled {
-  cursor: wait;
-  opacity: 0.7;
 }
 
 .field-set {
