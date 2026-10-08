@@ -16,7 +16,7 @@ export default function HomePage() {
         </p>
         <button
           className="get-started-button"
-          onClick={() => navigate("/form")}
+          onClick={() => navigate("/login")}
         >
           <i className="bi bi-door-open-fill"></i>
           <p>Get Started</p>
