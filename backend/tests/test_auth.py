@@ -295,6 +295,100 @@ def test_expired_lock_resets_failed_attempt_counter(client, database_url):
     assert locked_until is None
 
 
+def _login_attempt(client, ip: str, email: str, password: str = "wrong-password"):
+    return client.post(
+        "/auth/login",
+        json={"email": email, "password": password},
+        headers={"x-vercel-forwarded-for": ip},
+    )
+
+
+def test_ip_rate_limit_blocks_eleventh_attempt_across_different_accounts(client):
+    ip = "203.0.113.5"
+    for i in range(main.LOGIN_RATE_LIMIT):
+        response = _login_attempt(client, ip, f"nouser{i}@example.com")
+        assert response.status_code == 401
+
+    blocked = _login_attempt(client, ip, "nouser-eleventh@example.com")
+
+    assert blocked.status_code == 429
+
+
+def test_successful_login_does_not_increase_net_ip_attempt_count(client, database_url):
+    client.post("/auth/register", json=VALID_USER)
+    ip = "198.51.100.7"
+
+    for i in range(3):
+        _login_attempt(client, ip, f"nouser{i}@example.com")
+    response = _login_attempt(client, ip, VALID_USER["email"], VALID_USER["password"])
+    assert response.status_code == 200
+
+    client_hash = hashlib.sha256(f"login:{ip}".encode("utf-8")).hexdigest()
+    with psycopg.connect(database_url) as connection:
+        attempt_count = connection.execute(
+            "SELECT attempt_count FROM login_rate_limits WHERE client_hash = %s", (client_hash,)
+        ).fetchone()[0]
+    # 3 failed attempts increment by 1 each, the successful one increments then
+    # decrements by 1 (net zero), so only the 3 failures should remain counted.
+    assert attempt_count == 3
+
+
+def test_ip_rate_limits_are_tracked_separately_per_ip(client):
+    ip_a = "203.0.113.10"
+    ip_b = "203.0.113.20"
+
+    for i in range(main.LOGIN_RATE_LIMIT):
+        _login_attempt(client, ip_a, f"a{i}@example.com")
+    blocked = _login_attempt(client, ip_a, "a-extra@example.com")
+    assert blocked.status_code == 429
+
+    still_allowed = _login_attempt(client, ip_b, "b0@example.com")
+    assert still_allowed.status_code == 401
+
+
+def test_ip_rate_limit_resets_after_window_expires(client, database_url):
+    ip = "203.0.113.30"
+    for i in range(main.LOGIN_RATE_LIMIT):
+        _login_attempt(client, ip, f"x{i}@example.com")
+    blocked = _login_attempt(client, ip, "blocked@example.com")
+    assert blocked.status_code == 429
+
+    with psycopg.connect(database_url, autocommit=True) as connection:
+        connection.execute(
+            "UPDATE login_rate_limits SET window_started_at = now() - interval '16 minutes'"
+        )
+
+    recovered = _login_attempt(client, ip, "after-reset@example.com")
+    assert recovered.status_code == 401
+
+
+def test_rate_limit_block_persists_across_many_subsequent_attempts(client, database_url):
+    """Regression guard for the 429-triggers-rollback hypothesis.
+
+    enforce_auth_rate_limit's INSERT/UPDATE runs inside the same `with
+    connection:` block as the HTTPException(429) it raises, so psycopg rolls
+    that statement back along with everything else. If that rollback ever let
+    later requests slip through (instead of just capping the persisted
+    counter at the limit), this test would catch it.
+    """
+    ip = "203.0.113.40"
+    for i in range(main.LOGIN_RATE_LIMIT):
+        _login_attempt(client, ip, f"y{i}@example.com")
+
+    for i in range(5):
+        response = _login_attempt(client, ip, f"still-blocked{i}@example.com")
+        assert response.status_code == 429
+
+    client_hash = hashlib.sha256(f"login:{ip}".encode("utf-8")).hexdigest()
+    with psycopg.connect(database_url) as connection:
+        attempt_count = connection.execute(
+            "SELECT attempt_count FROM login_rate_limits WHERE client_hash = %s", (client_hash,)
+        ).fetchone()[0]
+    # The row-tripping increment is rolled back every time, so the persisted
+    # count plateaus at the limit instead of growing with each rejection.
+    assert attempt_count == main.LOGIN_RATE_LIMIT
+
+
 SAMPLE_LEARNING_PATH = [
     {"title": "Step One", "description": "Learn the basics.", "estimated_time": "2 weeks"},
     {"title": "Step Two", "description": "Go deeper.", "estimated_time": "3 weeks"},

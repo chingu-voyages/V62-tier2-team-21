@@ -1,0 +1,109 @@
+{
+  "info": {
+    "name": "Learning Path Generator - DB Demo",
+    "description": "Canlı backend uzerinde register -> login -> save -> list -> delete akisini gosterip veritabaninin calistigini kanitlamak icin hazirlandi.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "https://backend-ten-rust-18.vercel.app" },
+    { "key": "demo_email", "value": "demo-{{$timestamp}}@example.com" },
+    { "key": "demo_password", "value": "DemoPass123!" },
+    { "key": "token", "value": "" },
+    { "key": "saved_path_id", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "1) Register",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{base_url}}/auth/register",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"full_name\": \"Demo Test\",\n  \"email\": \"{{demo_email}}\",\n  \"password\": \"{{demo_password}}\"\n}"
+        }
+      }
+    },
+    {
+      "name": "2) Login",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const data = pm.response.json();",
+              "pm.collectionVariables.set('token', data.session_token);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{base_url}}/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{demo_email}}\",\n  \"password\": \"{{demo_password}}\"\n}"
+        }
+      }
+    },
+    {
+      "name": "3) Me (oturum dogrulama)",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": "{{base_url}}/auth/me"
+      }
+    },
+    {
+      "name": "4) Save Learning Path",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const data = pm.response.json();",
+              "pm.collectionVariables.set('saved_path_id', data.id);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": "{{base_url}}/learning-path/save",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Demo Path\",\n  \"items\": [\n    { \"title\": \"Learn basics\", \"description\": \"Intro to the topic\", \"estimated_time\": \"1 week\" }\n  ]\n}"
+        }
+      }
+    },
+    {
+      "name": "5) List Saved Paths (DB'den geri oku)",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": "{{base_url}}/learning-path/saved"
+      }
+    },
+    {
+      "name": "6) Delete Saved Path",
+      "request": {
+        "method": "DELETE",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": "{{base_url}}/learning-path/saved/{{saved_path_id}}"
+      }
+    },
+    {
+      "name": "7) Delete Account (temizlik)",
+      "request": {
+        "method": "DELETE",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": "{{base_url}}/auth/account"
+      }
+    }
+  ]
+}
