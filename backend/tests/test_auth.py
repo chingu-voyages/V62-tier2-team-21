@@ -1,9 +1,12 @@
 import hashlib
 import os
 import re
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from urllib.parse import urlparse
 
+import httpx
 import psycopg
 import pytest
 from fastapi.testclient import TestClient
@@ -312,7 +315,9 @@ def _auth_headers(client) -> dict:
 
 
 def test_save_learning_path_requires_authentication(api_client):
-    response = api_client.post("/learning-path/save", json={"items": SAMPLE_LEARNING_PATH})
+    response = api_client.post(
+        "/learning-path/save", json={"items": SAMPLE_LEARNING_PATH, "title": "My Path"}
+    )
 
     assert response.status_code == 401
 
@@ -320,7 +325,31 @@ def test_save_learning_path_requires_authentication(api_client):
 def test_save_learning_path_rejects_empty_selection(client):
     headers = _auth_headers(client)
 
-    response = client.post("/learning-path/save", headers=headers, json={"items": []})
+    response = client.post(
+        "/learning-path/save", headers=headers, json={"items": [], "title": "Empty"}
+    )
+
+    assert response.status_code == 422
+
+
+def test_save_learning_path_requires_title(client):
+    headers = _auth_headers(client)
+
+    response = client.post(
+        "/learning-path/save", headers=headers, json={"items": [SAMPLE_LEARNING_PATH[0]]}
+    )
+
+    assert response.status_code == 422
+
+
+def test_save_learning_path_rejects_blank_title(client):
+    headers = _auth_headers(client)
+
+    response = client.post(
+        "/learning-path/save",
+        headers=headers,
+        json={"items": [SAMPLE_LEARNING_PATH[0]], "title": "   "},
+    )
 
     assert response.status_code == 422
 
@@ -329,7 +358,9 @@ def test_save_learning_path_only_stores_checked_items(client):
     headers = _auth_headers(client)
     checked_items = [SAMPLE_LEARNING_PATH[0]]
 
-    response = client.post("/learning-path/save", headers=headers, json={"items": checked_items})
+    response = client.post(
+        "/learning-path/save", headers=headers, json={"items": checked_items, "title": "My Path"}
+    )
 
     assert response.status_code == 201
     body = response.json()
@@ -340,8 +371,16 @@ def test_save_learning_path_only_stores_checked_items(client):
 
 def test_list_saved_learning_paths_returns_most_recent_first(client):
     headers = _auth_headers(client)
-    client.post("/learning-path/save", headers=headers, json={"items": [SAMPLE_LEARNING_PATH[0]]})
-    client.post("/learning-path/save", headers=headers, json={"items": [SAMPLE_LEARNING_PATH[1]]})
+    client.post(
+        "/learning-path/save",
+        headers=headers,
+        json={"items": [SAMPLE_LEARNING_PATH[0]], "title": "First"},
+    )
+    client.post(
+        "/learning-path/save",
+        headers=headers,
+        json={"items": [SAMPLE_LEARNING_PATH[1]], "title": "Second"},
+    )
 
     response = client.get("/learning-path/saved", headers=headers)
 
@@ -354,7 +393,11 @@ def test_list_saved_learning_paths_returns_most_recent_first(client):
 
 def test_saved_learning_paths_are_isolated_per_user(client, database_url):
     headers = _auth_headers(client)
-    client.post("/learning-path/save", headers=headers, json={"items": [SAMPLE_LEARNING_PATH[0]]})
+    client.post(
+        "/learning-path/save",
+        headers=headers,
+        json={"items": [SAMPLE_LEARNING_PATH[0]], "title": "My Path"},
+    )
 
     other_user = {**VALID_USER, "email": "other@example.com"}
     client.post("/auth/register", json=other_user)
@@ -369,7 +412,7 @@ def test_saved_learning_paths_are_isolated_per_user(client, database_url):
     assert response.json() == []
 
 
-def test_save_learning_path_stores_optional_title(client):
+def test_save_learning_path_strips_title_whitespace(client):
     headers = _auth_headers(client)
 
     response = client.post(
@@ -385,7 +428,9 @@ def test_save_learning_path_stores_optional_title(client):
 def test_rename_saved_learning_path(client):
     headers = _auth_headers(client)
     saved = client.post(
-        "/learning-path/save", headers=headers, json={"items": [SAMPLE_LEARNING_PATH[0]]}
+        "/learning-path/save",
+        headers=headers,
+        json={"items": [SAMPLE_LEARNING_PATH[0]], "title": "Original"},
     ).json()
 
     response = client.patch(
@@ -396,10 +441,27 @@ def test_rename_saved_learning_path(client):
     assert response.json()["title"] == "Renamed"
 
 
+def test_rename_saved_learning_path_rejects_blank_title(client):
+    headers = _auth_headers(client)
+    saved = client.post(
+        "/learning-path/save",
+        headers=headers,
+        json={"items": [SAMPLE_LEARNING_PATH[0]], "title": "Original"},
+    ).json()
+
+    response = client.patch(
+        f"/learning-path/saved/{saved['id']}", headers=headers, json={"title": "   "}
+    )
+
+    assert response.status_code == 422
+
+
 def test_rename_saved_learning_path_rejects_other_users(client):
     headers = _auth_headers(client)
     saved = client.post(
-        "/learning-path/save", headers=headers, json={"items": [SAMPLE_LEARNING_PATH[0]]}
+        "/learning-path/save",
+        headers=headers,
+        json={"items": [SAMPLE_LEARNING_PATH[0]], "title": "Original"},
     ).json()
 
     other_user = {**VALID_USER, "email": "other@example.com"}
@@ -419,7 +481,9 @@ def test_rename_saved_learning_path_rejects_other_users(client):
 def test_delete_saved_learning_path(client):
     headers = _auth_headers(client)
     saved = client.post(
-        "/learning-path/save", headers=headers, json={"items": [SAMPLE_LEARNING_PATH[0]]}
+        "/learning-path/save",
+        headers=headers,
+        json={"items": [SAMPLE_LEARNING_PATH[0]], "title": "My Path"},
     ).json()
 
     response = client.delete(f"/learning-path/saved/{saved['id']}", headers=headers)
@@ -431,7 +495,9 @@ def test_delete_saved_learning_path(client):
 def test_delete_saved_learning_path_rejects_other_users(client):
     headers = _auth_headers(client)
     saved = client.post(
-        "/learning-path/save", headers=headers, json={"items": [SAMPLE_LEARNING_PATH[0]]}
+        "/learning-path/save",
+        headers=headers,
+        json={"items": [SAMPLE_LEARNING_PATH[0]], "title": "My Path"},
     ).json()
 
     other_user = {**VALID_USER, "email": "other@example.com"}
@@ -450,7 +516,9 @@ def test_delete_saved_learning_path_rejects_other_users(client):
 def test_delete_saved_learning_path_item_removes_just_that_step(client):
     headers = _auth_headers(client)
     saved = client.post(
-        "/learning-path/save", headers=headers, json={"items": SAMPLE_LEARNING_PATH}
+        "/learning-path/save",
+        headers=headers,
+        json={"items": SAMPLE_LEARNING_PATH, "title": "My Path"},
     ).json()
     item_id = saved["items"][0]["id"]
 
@@ -465,7 +533,9 @@ def test_delete_saved_learning_path_item_removes_just_that_step(client):
 def test_deleting_the_last_item_deletes_the_saved_path(client):
     headers = _auth_headers(client)
     saved = client.post(
-        "/learning-path/save", headers=headers, json={"items": [SAMPLE_LEARNING_PATH[0]]}
+        "/learning-path/save",
+        headers=headers,
+        json={"items": [SAMPLE_LEARNING_PATH[0]], "title": "My Path"},
     ).json()
     item_id = saved["items"][0]["id"]
 
@@ -475,13 +545,53 @@ def test_deleting_the_last_item_deletes_the_saved_path(client):
     assert client.get("/learning-path/saved", headers=headers).json() == []
 
 
+def test_concurrent_deletion_of_last_two_items_still_removes_path(client, database_url):
+    """Deleting a path's last two items at the same time must not orphan the path.
+
+    Two requests racing to delete sibling items used to both see the other's
+    item as still present and both skip the empty-path cleanup, leaving a
+    saved path with zero items.
+    """
+    headers = _auth_headers(client)
+    saved = client.post(
+        "/learning-path/save",
+        headers=headers,
+        json={"items": SAMPLE_LEARNING_PATH, "title": "My Path"},
+    ).json()
+    item_ids = [item["id"] for item in saved["items"]]
+
+    barrier = threading.Barrier(2)
+
+    def delete_item(item_id: int) -> httpx.Response:
+        barrier.wait(timeout=5)
+        return TestClient(main.app).delete(
+            f"/learning-path/saved/{saved['id']}/items/{item_id}", headers=headers
+        )
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        futures = [executor.submit(delete_item, item_id) for item_id in item_ids]
+        responses = [future.result() for future in futures]
+
+    assert all(response.status_code == 204 for response in responses)
+    assert client.get("/learning-path/saved", headers=headers).json() == []
+    with psycopg.connect(database_url) as connection:
+        assert connection.execute("SELECT count(*) FROM saved_learning_paths").fetchone()[0] == 0
+        assert connection.execute(
+            "SELECT count(*) FROM saved_learning_path_items"
+        ).fetchone()[0] == 0
+
+
 def test_delete_account_cascades_sessions_and_saved_paths(client, database_url):
     client.post("/auth/register", json=VALID_USER)
     login = client.post(
         "/auth/login", json={"email": VALID_USER["email"], "password": VALID_USER["password"]}
     )
     headers = {"Authorization": f"Bearer {login.json()['session_token']}"}
-    client.post("/learning-path/save", headers=headers, json={"items": [SAMPLE_LEARNING_PATH[0]]})
+    client.post(
+        "/learning-path/save",
+        headers=headers,
+        json={"items": [SAMPLE_LEARNING_PATH[0]], "title": "My Path"},
+    )
 
     response = client.delete("/auth/account", headers=headers)
 

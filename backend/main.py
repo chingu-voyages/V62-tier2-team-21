@@ -456,27 +456,27 @@ class SessionResponse(BaseModel):
 
 class SaveLearningPathRequest(BaseModel):
     items: list[LearningPathStep] = Field(min_length=1)
-    title: str | None = Field(default=None, max_length=200)
+    title: str = Field(min_length=1, max_length=200)
 
     @field_validator("title")
     @classmethod
-    def blank_title_is_none(cls, value: str | None) -> str | None:
-        if value is None:
-            return None
+    def strip_and_require_title(cls, value: str) -> str:
         value = value.strip()
-        return value or None
+        if not value:
+            raise ValueError("title must not be blank")
+        return value
 
 
 class UpdateSavedLearningPathRequest(BaseModel):
-    title: str | None = Field(default=None, max_length=200)
+    title: str = Field(min_length=1, max_length=200)
 
     @field_validator("title")
     @classmethod
-    def blank_title_is_none(cls, value: str | None) -> str | None:
-        if value is None:
-            return None
+    def strip_and_require_title(cls, value: str) -> str:
         value = value.strip()
-        return value or None
+        if not value:
+            raise ValueError("title must not be blank")
+        return value
 
 
 class SavedLearningPathItem(LearningPathStep):
@@ -486,7 +486,7 @@ class SavedLearningPathItem(LearningPathStep):
 class SavedLearningPathResponse(BaseModel):
     id: int
     created_at: datetime
-    title: str | None
+    title: str
     items: list[SavedLearningPathItem]
 
 
@@ -862,7 +862,7 @@ def rename_saved_learning_path(
     request: UpdateSavedLearningPathRequest,
     user: UserResponse = Depends(require_session),
 ):
-    """Set or clear the title/note on one of the user's saved learning paths."""
+    """Rename one of the user's saved learning paths. Title is required and cannot be blank."""
     try:
         connection = get_db_connection()
         try:
@@ -922,11 +922,19 @@ def delete_saved_learning_path_item(
         connection = get_db_connection()
         try:
             with connection:
+                # Lock the parent row first so two concurrent deletes of sibling items
+                # (e.g. the last two steps) can't both see the other's item as still
+                # present and both skip the empty-path cleanup, orphaning the path.
+                path_row = connection.execute(
+                    "SELECT id FROM saved_learning_paths WHERE id = %s AND user_id = %s FOR UPDATE",
+                    (saved_path_id, user.id),
+                ).fetchone()
+                if not path_row:
+                    raise HTTPException(status_code=404, detail="Saved learning path step not found.")
                 row = connection.execute(
                     "DELETE FROM saved_learning_path_items WHERE id = %s AND saved_learning_path_id = %s "
-                    "AND saved_learning_path_id IN (SELECT id FROM saved_learning_paths WHERE user_id = %s) "
                     "RETURNING id",
-                    (item_id, saved_path_id, user.id),
+                    (item_id, saved_path_id),
                 ).fetchone()
                 if not row:
                     raise HTTPException(status_code=404, detail="Saved learning path step not found.")
