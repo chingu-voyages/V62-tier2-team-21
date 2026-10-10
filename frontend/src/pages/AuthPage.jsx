@@ -85,7 +85,10 @@ export default function AuthPage() {
           ? await handleSignup(controller)
           : await handleLogin(controller);
       saveSession(session, { remember });
-      navigate(from?.pathname ?? "/", { replace: true, state: from?.state });
+      navigate(from?.pathname ?? "/form", {
+        replace: true,
+        state: from?.state,
+      });
     } catch (requestError) {
       setError(
         requestError.name === "AbortError"
