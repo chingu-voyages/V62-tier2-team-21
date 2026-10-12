@@ -22,9 +22,9 @@ export default function Header() {
           aria-expanded={isMenuOpen}
         >
           {isMenuOpen ? (
-            <i class="bi bi-x"></i>
+            <i className="bi bi-x"></i>
           ) : (
-            <i class="bi bi-list hamburger-icon"></i>
+            <i className="bi bi-list hamburger-icon"></i>
           )}
         </button>
 

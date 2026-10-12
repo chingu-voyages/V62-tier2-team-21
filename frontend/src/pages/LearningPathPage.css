@@ -111,12 +111,12 @@
   -webkit-text-stroke: 0.5px;
 }
 
-.learning-path-finish-button {
+.learning-path-save-button {
   background-color: #3bb13f;
   color: #ffffff;
 }
 
-.learning-path-finish-button i {
+.learning-path-save-button i {
   background-color: #3bb13f;
   color: #ffffff;
 }
@@ -133,7 +133,48 @@
     width: 100%;
   }
 
-  .learning-path-finish-button {
+  .learning-path-save-button {
     margin-top: 0;
   }
+}
+
+/* Edit, Delete, Cancel buttons */
+.saved-learning-path-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 3.2rem;
+  height: 3.2rem;
+  padding: 0;
+
+  background-color: transparent;
+  color: #315041;
+  border: none;
+  border-radius: 6px;
+
+  font-size: 1.6rem;
+  cursor: pointer;
+
+  transition: background-color 0.2s ease;
+}
+
+/* Hover */
+.saved-learning-path-icon-button:hover {
+  background-color: #e9ebf0;
+}
+
+/* Delete and Remove buttons */
+.saved-learning-path-icon-button-danger {
+  color: #c0392b;
+}
+
+.saved-learning-path-icon-button-danger:hover {
+  background-color: #fce8e6;
+}
+
+/* Keyboard focus */
+.saved-learning-path-icon-button:focus-visible {
+  outline: 2px solid #315041;
+  outline-offset: 2px;
 }
