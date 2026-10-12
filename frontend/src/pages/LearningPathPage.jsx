@@ -1,70 +1,158 @@
-import { Navigate, useLocation, Link } from "react-router-dom";
 import { useState } from "react";
+import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import "./LearningPathPage.css";
+import Footer from "../components/layout/Footer";
+import { authHeader, clearSession, getSession } from "../util/auth";
+
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 export default function LearningPathPage() {
   const location = useLocation();
+  const navigate = useNavigate();
   const learningPath = location.state?.learningPath;
+  const session = getSession();
 
-  const [completedSteps, setCompletedSteps] = useState(
+  const [checkedSteps, setCheckedSteps] = useState(
     () => learningPath?.map(() => false) ?? [],
   );
+  const [saveError, setSaveError] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [savedCount, setSavedCount] = useState(null);
 
   if (!learningPath) {
     return <Navigate to="/" replace />;
   }
+
   function toggleCheck(index) {
-    setCompletedSteps((prevState) =>
-      prevState.map((step, i) => (i === index ? !step : step)),
+    setSaveError("");
+    setSavedCount(null);
+
+    setCheckedSteps((prevState) =>
+      prevState.map((checked, i) => (i === index ? !checked : checked)),
     );
   }
 
-  const completedStepsCount = completedSteps.filter((step) => step).length;
+  async function handleSave() {
+    const selectedItems = learningPath.filter(
+      (_, index) => checkedSteps[index],
+    );
+
+    if (selectedItems.length === 0) {
+      setSaveError("Select at least one step to save.");
+      return;
+    }
+
+    if (!session) {
+      navigate("/login", {
+        state: { from: location },
+      });
+      return;
+    }
+
+    setSaveError("");
+    setIsSaving(true);
+
+    try {
+      const response = await fetch(`${API_URL}/learning-path/save`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...authHeader(),
+        },
+        body: JSON.stringify({
+          title: "My Learning Path",
+          items: selectedItems,
+        }),
+      });
+
+      if (response.status === 401) {
+        clearSession();
+        navigate("/login", {
+          state: { from: location },
+        });
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error(
+          "Could not save your learning path. Please try again later.",
+        );
+      }
+
+      setSavedCount(selectedItems.length);
+    } catch (error) {
+      setSaveError(error.message);
+    } finally {
+      setIsSaving(false);
+    }
+  }
 
   return (
     <div className="learning-path-page">
-      <div className="learning-path-container">
+      <main className="learning-path-container">
         <h2 className="learning-path-title">Your Learning Path</h2>
-        <h3 className="learning-path-count">
-          {completedStepsCount} / {completedSteps.length} completed
-        </h3>
-        <ul className="learning-path-steps">
+
+        <ol className="learning-path-steps">
           {learningPath.map((step, index) => (
             <li className="learning-path-step" key={index}>
               <div className="learning-path-title-container">
                 <span className="step-number">{index + 1}.</span>
+
                 <input
                   type="checkbox"
-                  checked={completedSteps[index]}
+                  checked={checkedSteps[index] ?? false}
                   onChange={() => toggleCheck(index)}
                   className="learning-path-check-box"
+                  aria-label={`Select ${step.title}`}
                 />
+
                 <h3 className="learning-path-step-title">{step.title}</h3>
               </div>
+
               <p className="learning-path-step-description">
                 {step.description}
               </p>
+
               <p className="learning-path-step-time">
                 Estimated time: {step.estimated_time}
               </p>
             </li>
           ))}
-        </ul>
+        </ol>
+
+        {saveError && (
+          <p className="learning-path-error" role="alert">
+            {saveError}
+          </p>
+        )}
+
+        {savedCount !== null && (
+          <p className="learning-path-success">
+            Saved {savedCount} step
+            {savedCount === 1 ? "" : "s"}. View them on your{" "}
+            <Link to="/saved-learning-paths">saved learning paths</Link> page.
+          </p>
+        )}
+
         <div className="learning-path-button-container">
-          <Link to="/form">
-            <button className="learning-path-button">
-              <i class="bi bi-arrow-repeat"></i>
-              Generate New Learning Path
-            </button>
-          </Link>
-          <Link to="/">
-            <button className="learning-path-finish-button learning-path-button">
-              <i class="bi bi-check2"></i>
-              Finish
-            </button>
-          </Link>
+          <button
+            type="button"
+            className="learning-path-button"
+            onClick={() => navigate("/form")}
+          >
+            ⟳ Generate New Learning Path
+          </button>
+
+          <button
+            type="button"
+            className="learning-path-button learning-path-save-button"
+            onClick={handleSave}
+            disabled={isSaving}
+          >
+            {isSaving ? "Saving…" : "✓ Save"}
+          </button>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

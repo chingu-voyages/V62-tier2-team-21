@@ -22,27 +22,24 @@ export default function SavedLearningPathsPage() {
     setSessionExpired(true);
   }
 
-  const loadSavedPaths = useCallback(
-    (signal) => {
-      fetch(`${API_URL}/learning-path/saved`, { headers: authHeader(), signal })
-        .then(async (response) => {
-          if (response.status === 401) {
-            handleUnauthorized();
-            return;
-          }
-          if (!response.ok) {
-            throw new Error("Could not load your saved learning paths.");
-          }
-          setSavedPaths(await response.json());
-        })
-        .catch((requestError) => {
-          if (requestError.name !== "AbortError") {
-            setError(requestError.message);
-          }
-        });
-    },
-    [],
-  );
+  const loadSavedPaths = useCallback((signal) => {
+    fetch(`${API_URL}/learning-path/saved`, { headers: authHeader(), signal })
+      .then(async (response) => {
+        if (response.status === 401) {
+          handleUnauthorized();
+          return;
+        }
+        if (!response.ok) {
+          throw new Error("Could not load your saved learning paths.");
+        }
+        setSavedPaths(await response.json());
+      })
+      .catch((requestError) => {
+        if (requestError.name !== "AbortError") {
+          setError(requestError.message);
+        }
+      });
+  }, []);
 
   useEffect(() => {
     if (!session) return;
@@ -60,15 +57,21 @@ export default function SavedLearningPathsPage() {
   async function handleRenameSubmit(event, savedPathId) {
     event.preventDefault();
     try {
-      const response = await fetch(`${API_URL}/learning-path/saved/${savedPathId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", ...authHeader() },
-        body: JSON.stringify({ title: editingTitle }),
-      });
+      const response = await fetch(
+        `${API_URL}/learning-path/saved/${savedPathId}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json", ...authHeader() },
+          body: JSON.stringify({ title: editingTitle }),
+        },
+      );
       if (response.status === 401) return handleUnauthorized();
-      if (!response.ok) throw new Error("Could not rename the saved learning path.");
+      if (!response.ok)
+        throw new Error("Could not rename the saved learning path.");
       const updated = await response.json();
-      setSavedPaths((prev) => prev.map((p) => (p.id === savedPathId ? updated : p)));
+      setSavedPaths((prev) =>
+        prev.map((p) => (p.id === savedPathId ? updated : p)),
+      );
       setEditingId(null);
     } catch (requestError) {
       setError(requestError.message);
@@ -76,12 +79,18 @@ export default function SavedLearningPathsPage() {
   }
 
   async function handleDeletePath(savedPathId) {
-    if (!window.confirm("Delete this saved learning path? This cannot be undone.")) return;
+    if (
+      !window.confirm("Delete this saved learning path? This cannot be undone.")
+    )
+      return;
     try {
-      const response = await fetch(`${API_URL}/learning-path/saved/${savedPathId}`, {
-        method: "DELETE",
-        headers: authHeader(),
-      });
+      const response = await fetch(
+        `${API_URL}/learning-path/saved/${savedPathId}`,
+        {
+          method: "DELETE",
+          headers: authHeader(),
+        },
+      );
       if (response.status === 401) return handleUnauthorized();
       if (!response.ok && response.status !== 404) {
         throw new Error("Could not delete the saved learning path.");
@@ -153,7 +162,11 @@ export default function SavedLearningPathsPage() {
                     placeholder="Add a title or note"
                     onChange={(event) => setEditingTitle(event.target.value)}
                   />
-                  <button type="submit" className="saved-learning-path-icon-button" aria-label="Save title">
+                  <button
+                    type="submit"
+                    className="saved-learning-path-icon-button"
+                    aria-label="Save title"
+                  >
                     <i className="bi bi-check-lg"></i>
                   </button>
                   <button
@@ -227,7 +240,6 @@ export default function SavedLearningPathsPage() {
           Generate New Learning Path
         </Link>
       </main>
-      <Footer />
     </div>
   );
 }

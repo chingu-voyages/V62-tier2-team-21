@@ -23,7 +23,7 @@ export default function ErrorContent({ handleCloseModal, generationError }) {
 
   return (
     <>
-      <i class="bi bi-database-gear error-icon"></i>
+      <i className="bi bi-database-gear error-icon"></i>
       <h2 className="loading-title">{content.title}</h2>
       <p className="loading-message">{content.message}</p>
       <button onClick={handleCloseModal} className="back-to-form-button">

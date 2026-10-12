@@ -80,15 +80,18 @@ export default function AuthPage() {
     const timeout = setTimeout(() => controller.abort(), 15_000);
 
     try {
-      const session =
-        mode === "signup"
-          ? await handleSignup(controller)
-          : await handleLogin(controller);
-      saveSession(session, { remember });
-      navigate(from?.pathname ?? "/form", {
-        replace: true,
-        state: from?.state,
-      });
+      if (mode === "signup") {
+        await handleSignup(controller);
+        navigate("/login", { replace: true });
+      } else {
+        const session = await handleLogin(controller);
+        saveSession(session, { remember });
+
+        navigate(from?.pathname ?? "/form", {
+          replace: true,
+          state: from?.state,
+        });
+      }
     } catch (requestError) {
       setError(
         requestError.name === "AbortError"
