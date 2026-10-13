@@ -1,0 +1,188 @@
+.learning-path-select-all {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  align-self: flex-end;
+  gap: 1rem;
+
+  font-size: 1.8rem;
+  font-weight: 500;
+  color: #315041;
+  cursor: pointer;
+}
+
+.learning-path-select-all input {
+  width: 2rem;
+  height: 2rem;
+  margin: 0;
+  accent-color: #315041;
+  cursor: pointer;
+}
+
+.learning-path-success {
+  font-size: 1.4rem;
+  text-align: center;
+}
+
+.saved-learning-path-step-header {
+  display: flex;
+  align-items: center;
+}
+
+/* Edit, Delete, Cancel buttons */
+.saved-learning-path-batch-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.6rem;
+}
+
+.saved-learning-path-heading {
+  flex: 1;
+  min-width: 0;
+}
+
+.learning-path-title {
+  margin-bottom: 2rem;
+}
+
+.saved-learning-path-batch-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.saved-learning-path-toggle {
+  appearance: none;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+
+  width: 100%;
+  padding: 0;
+  margin: 0;
+
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.saved-learning-path-toggle i {
+  flex-shrink: 0;
+  font-size: 1.4rem;
+}
+
+.saved-learning-path-toggle:focus-visible {
+  outline: 2px solid #315041;
+  outline-offset: 4px;
+}
+
+.saved-learning-path-batch-title {
+  font-size: 1.8rem;
+  font-weight: 600;
+  color: #315041;
+  margin: 0;
+}
+
+.saved-learning-path-batch-date {
+  font-size: 1.2rem;
+  color: #556b5f;
+  margin-top: 0.4rem;
+}
+
+.saved-learning-path-batch {
+  margin-bottom: 3rem;
+}
+
+.saved-learning-path-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 3.2rem;
+  height: 3.2rem;
+  padding: 0;
+
+  background-color: transparent;
+  color: #315041;
+  border: none;
+  border-radius: 6px;
+
+  font-size: 1.6rem;
+  cursor: pointer;
+
+  transition: background-color 0.2s ease;
+}
+
+/* Hover */
+.saved-learning-path-icon-button:hover {
+  background-color: #e9ebf0;
+}
+
+/* Delete and Remove buttons */
+.saved-learning-path-icon-button-danger {
+  color: #c0392b;
+}
+
+.saved-learning-path-icon-button-danger:hover {
+  background-color: #fce8e6;
+}
+
+/* Keyboard focus */
+.saved-learning-path-icon-button:focus-visible {
+  outline: 2px solid #315041;
+  outline-offset: 2px;
+}
+
+/* Accordion animation */
+
+.saved-learning-path-content {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  visibility: hidden;
+
+  transition:
+    grid-template-rows 0.35s ease,
+    opacity 0.35s ease,
+    visibility 0.35s ease;
+}
+
+.saved-learning-path-content.is-open {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  visibility: visible;
+}
+
+.saved-learning-path-content-inner {
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Arrow animation */
+
+.saved-learning-path-toggle i {
+  display: inline-block;
+  transition: transform 0.35s ease;
+}
+
+.saved-learning-path-toggle[aria-expanded="true"] i {
+  transform: rotate(90deg);
+}
+
+/* Reduced motion accessibility */
+
+@media (prefers-reduced-motion: reduce) {
+  .saved-learning-path-content,
+  .saved-learning-path-toggle i {
+    transition: none;
+  }
+}
