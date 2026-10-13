@@ -267,7 +267,6 @@ export default function AuthPage() {
           ← Back to home
         </Link>
       </main>
-      <Footer />
     </div>
   );
 }

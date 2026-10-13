@@ -92,7 +92,8 @@
   margin: 0;
 }
 
-.saved-learning-path-batch-date {
+.saved-learning-path-batch-date,
+.saved-learning-path-progress {
   font-size: 1.2rem;
   color: #556b5f;
   margin-top: 0.4rem;

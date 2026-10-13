@@ -25,6 +25,7 @@
 
 .nav-link {
   text-decoration: none;
+  color: #47474a;
 }
 
 .nav-link:hover,
@@ -48,6 +49,19 @@
   background: none;
   cursor: pointer;
   font-size: 1.8rem;
+}
+
+.header-logout-button {
+  background: none;
+  border: none;
+  font: inherit;
+  cursor: pointer;
+  padding: 0;
+}
+
+.header-logout-button:disabled {
+  cursor: wait;
+  opacity: 0.6;
 }
 
 @media (max-width: 768px) {

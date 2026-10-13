@@ -20,6 +20,8 @@
 
   width: 90%;
   max-width: 60rem;
+
+  min-height: 70vh;
 }
 
 .learning-path-title-container {
@@ -47,6 +49,8 @@
   flex-direction: column;
   gap: 2rem;
   padding-left: 2rem;
+  padding-top: 2rem;
+  font-size: 1.2rem;
   list-style: none;
 }
 
@@ -121,6 +125,37 @@
   color: #ffffff;
 }
 
+/* Loading spinner for step deletion */
+
+.saved-learning-path-spinner {
+  display: inline-block;
+  animation: saved-path-spin 0.8s linear infinite;
+}
+
+@keyframes saved-path-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.saved-learning-path-removing {
+  font-size: 1.4rem;
+  font-weight: 400;
+  color: #556b5f;
+  white-space: nowrap;
+}
+
+.saved-learning-path-icon-button:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .saved-learning-path-spinner {
+    animation: none;
+  }
+}
+
 @media (max-width: 768px) {
   .learning-path-button-container {
     flex-direction: column;
@@ -136,45 +171,8 @@
   .learning-path-save-button {
     margin-top: 0;
   }
-}
 
-/* Edit, Delete, Cancel buttons */
-.saved-learning-path-icon-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-
-  width: 3.2rem;
-  height: 3.2rem;
-  padding: 0;
-
-  background-color: transparent;
-  color: #315041;
-  border: none;
-  border-radius: 6px;
-
-  font-size: 1.6rem;
-  cursor: pointer;
-
-  transition: background-color 0.2s ease;
-}
-
-/* Hover */
-.saved-learning-path-icon-button:hover {
-  background-color: #e9ebf0;
-}
-
-/* Delete and Remove buttons */
-.saved-learning-path-icon-button-danger {
-  color: #c0392b;
-}
-
-.saved-learning-path-icon-button-danger:hover {
-  background-color: #fce8e6;
-}
-
-/* Keyboard focus */
-.saved-learning-path-icon-button:focus-visible {
-  outline: 2px solid #315041;
-  outline-offset: 2px;
+  .learning-path-steps {
+    padding-left: 0rem;
+  }
 }
