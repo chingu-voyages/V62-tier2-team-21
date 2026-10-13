@@ -396,7 +396,7 @@ SAMPLE_LEARNING_PATH = [
 
 
 def _without_ids(items: list[dict]) -> list[dict]:
-    return [{k: v for k, v in item.items() if k != "id"} for item in items]
+    return [{k: v for k, v in item.items() if k not in ("id", "completed")} for item in items]
 
 
 def _auth_headers(client) -> dict:
@@ -622,6 +622,120 @@ def test_delete_saved_learning_path_item_removes_just_that_step(client):
     remaining = client.get("/learning-path/saved", headers=headers).json()
     assert len(remaining) == 1
     assert _without_ids(remaining[0]["items"]) == [SAMPLE_LEARNING_PATH[1]]
+
+
+def test_saved_learning_path_items_start_uncompleted(client):
+    headers = _auth_headers(client)
+    saved = client.post(
+        "/learning-path/save",
+        headers=headers,
+        json={"items": [SAMPLE_LEARNING_PATH[0]], "title": "My Path"},
+    ).json()
+
+    assert saved["items"][0]["completed"] is False
+
+
+def test_update_saved_learning_path_item_marks_it_completed(client):
+    headers = _auth_headers(client)
+    saved = client.post(
+        "/learning-path/save",
+        headers=headers,
+        json={"items": SAMPLE_LEARNING_PATH, "title": "My Path"},
+    ).json()
+    item_id = saved["items"][0]["id"]
+
+    response = client.patch(
+        f"/learning-path/saved/{saved['id']}/items/{item_id}",
+        headers=headers,
+        json={"completed": True},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["completed"] is True
+
+    remaining = client.get("/learning-path/saved", headers=headers).json()
+    items_by_id = {item["id"]: item for item in remaining[0]["items"]}
+    assert items_by_id[item_id]["completed"] is True
+    other_item_id = saved["items"][1]["id"]
+    assert items_by_id[other_item_id]["completed"] is False
+
+
+def test_update_saved_learning_path_item_can_mark_it_incomplete_again(client):
+    headers = _auth_headers(client)
+    saved = client.post(
+        "/learning-path/save",
+        headers=headers,
+        json={"items": [SAMPLE_LEARNING_PATH[0]], "title": "My Path"},
+    ).json()
+    item_id = saved["items"][0]["id"]
+    client.patch(
+        f"/learning-path/saved/{saved['id']}/items/{item_id}",
+        headers=headers,
+        json={"completed": True},
+    )
+
+    response = client.patch(
+        f"/learning-path/saved/{saved['id']}/items/{item_id}",
+        headers=headers,
+        json={"completed": False},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["completed"] is False
+
+
+def test_update_saved_learning_path_item_requires_authentication(api_client):
+    response = api_client.patch(
+        "/learning-path/saved/1/items/1", json={"completed": True}
+    )
+
+    assert response.status_code == 401
+
+
+def test_update_saved_learning_path_item_rejects_unknown_item(client):
+    headers = _auth_headers(client)
+    saved = client.post(
+        "/learning-path/save",
+        headers=headers,
+        json={"items": [SAMPLE_LEARNING_PATH[0]], "title": "My Path"},
+    ).json()
+
+    response = client.patch(
+        f"/learning-path/saved/{saved['id']}/items/999999",
+        headers=headers,
+        json={"completed": True},
+    )
+
+    assert response.status_code == 404
+
+
+def test_update_saved_learning_path_item_rejects_other_users(client):
+    headers = _auth_headers(client)
+    saved = client.post(
+        "/learning-path/save",
+        headers=headers,
+        json={"items": [SAMPLE_LEARNING_PATH[0]], "title": "My Path"},
+    ).json()
+    item_id = saved["items"][0]["id"]
+
+    other_user = {**VALID_USER, "email": "other@example.com"}
+    client.post("/auth/register", json=other_user)
+    other_login = client.post(
+        "/auth/login", json={"email": other_user["email"], "password": other_user["password"]}
+    )
+    other_headers = {"Authorization": f"Bearer {other_login.json()['session_token']}"}
+
+    response = client.patch(
+        f"/learning-path/saved/{saved['id']}/items/{item_id}",
+        headers=other_headers,
+        json={"completed": True},
+    )
+
+    assert response.status_code == 404
+    assert (
+        client.get("/learning-path/saved", headers=headers).json()[0]["items"][0]["completed"]
+        is False
+    )
 
 
 def test_deleting_the_last_item_deletes_the_saved_path(client):

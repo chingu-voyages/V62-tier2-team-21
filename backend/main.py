@@ -481,6 +481,11 @@ class UpdateSavedLearningPathRequest(BaseModel):
 
 class SavedLearningPathItem(LearningPathStep):
     id: int
+    completed: bool = False
+
+
+class UpdateSavedLearningPathItemRequest(BaseModel):
+    completed: bool
 
 
 class SavedLearningPathResponse(BaseModel):
@@ -775,13 +780,19 @@ def logout_all(user: UserResponse = Depends(require_session)):
 
 def _load_saved_path_items(connection: psycopg.Connection, path_id: int) -> list[SavedLearningPathItem]:
     items = connection.execute(
-        "SELECT id, title, description, estimated_time FROM saved_learning_path_items "
+        "SELECT id, title, description, estimated_time, completed FROM saved_learning_path_items "
         "WHERE saved_learning_path_id = %s ORDER BY step_order",
         (path_id,),
     ).fetchall()
     return [
-        SavedLearningPathItem(id=item_id, title=title, description=description, estimated_time=estimated_time)
-        for item_id, title, description, estimated_time in items
+        SavedLearningPathItem(
+            id=item_id,
+            title=title,
+            description=description,
+            estimated_time=estimated_time,
+            completed=completed,
+        )
+        for item_id, title, description, estimated_time, completed in items
     ]
 
 
@@ -954,6 +965,54 @@ def delete_saved_learning_path_item(
         raise HTTPException(
             status_code=500, detail="Could not delete the step. Please try again later."
         ) from error
+
+
+@app.patch(
+    "/learning-path/saved/{saved_path_id}/items/{item_id}", response_model=SavedLearningPathItem
+)
+def update_saved_learning_path_item(
+    saved_path_id: int,
+    item_id: int,
+    request: UpdateSavedLearningPathItemRequest,
+    user: UserResponse = Depends(require_session),
+):
+    """Mark one step of a saved learning path as completed or not completed."""
+    try:
+        connection = get_db_connection()
+        try:
+            with connection:
+                path_row = connection.execute(
+                    "SELECT id FROM saved_learning_paths WHERE id = %s AND user_id = %s",
+                    (saved_path_id, user.id),
+                ).fetchone()
+                if not path_row:
+                    raise HTTPException(status_code=404, detail="Saved learning path step not found.")
+                row = connection.execute(
+                    "UPDATE saved_learning_path_items SET completed = %s "
+                    "WHERE id = %s AND saved_learning_path_id = %s "
+                    "RETURNING id, title, description, estimated_time, completed",
+                    (request.completed, item_id, saved_path_id),
+                ).fetchone()
+                if not row:
+                    raise HTTPException(status_code=404, detail="Saved learning path step not found.")
+        finally:
+            connection.close()
+    except HTTPException:
+        raise
+    except (psycopg.Error, RuntimeError) as error:
+        logger.exception("Database error while updating saved learning path step")
+        raise HTTPException(
+            status_code=500, detail="Could not update the step. Please try again later."
+        ) from error
+
+    updated_id, title, description, estimated_time, completed = row
+    return SavedLearningPathItem(
+        id=updated_id,
+        title=title,
+        description=description,
+        estimated_time=estimated_time,
+        completed=completed,
+    )
 
 
 @app.delete("/auth/account", status_code=204)
