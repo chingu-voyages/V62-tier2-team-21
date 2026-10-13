@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import "./LearningPathPage.css";
-import Footer from "../components/layout/Footer";
 import { authHeader, clearSession, getSession } from "../util/auth";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
@@ -10,39 +9,22 @@ export default function LearningPathPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const learningPath = location.state?.learningPath;
-  const session = getSession();
 
-  const [checkedSteps, setCheckedSteps] = useState(
-    () => learningPath?.map(() => false) ?? [],
-  );
   const [saveError, setSaveError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
-  const [savedCount, setSavedCount] = useState(null);
+  const [isSaved, setIsSaved] = useState(false);
 
-  if (!learningPath) {
+  if (!Array.isArray(learningPath)) {
     return <Navigate to="/" replace />;
   }
 
-  function toggleCheck(index) {
-    setSaveError("");
-    setSavedCount(null);
-
-    setCheckedSteps((prevState) =>
-      prevState.map((checked, i) => (i === index ? !checked : checked)),
-    );
-  }
-
   async function handleSave() {
-    const selectedItems = learningPath.filter(
-      (_, index) => checkedSteps[index],
-    );
-
-    if (selectedItems.length === 0) {
-      setSaveError("Select at least one step to save.");
+    if (learningPath.length === 0) {
+      setSaveError("There are no steps to save.");
       return;
     }
 
-    if (!session) {
+    if (!getSession()) {
       navigate("/login", {
         state: { from: location },
       });
@@ -61,7 +43,7 @@ export default function LearningPathPage() {
         },
         body: JSON.stringify({
           title: "My Learning Path",
-          items: selectedItems,
+          items: learningPath,
         }),
       });
 
@@ -79,9 +61,13 @@ export default function LearningPathPage() {
         );
       }
 
-      setSavedCount(selectedItems.length);
+      setIsSaved(true);
     } catch (error) {
-      setSaveError(error.message);
+      setSaveError(
+        error instanceof Error
+          ? error.message
+          : "An unexpected error occurred.",
+      );
     } finally {
       setIsSaving(false);
     }
@@ -97,14 +83,6 @@ export default function LearningPathPage() {
             <li className="learning-path-step" key={index}>
               <div className="learning-path-title-container">
                 <span className="step-number">{index + 1}.</span>
-
-                <input
-                  type="checkbox"
-                  checked={checkedSteps[index] ?? false}
-                  onChange={() => toggleCheck(index)}
-                  className="learning-path-check-box"
-                  aria-label={`Select ${step.title}`}
-                />
 
                 <h3 className="learning-path-step-title">{step.title}</h3>
               </div>
@@ -126,10 +104,9 @@ export default function LearningPathPage() {
           </p>
         )}
 
-        {savedCount !== null && (
-          <p className="learning-path-success">
-            Saved {savedCount} step
-            {savedCount === 1 ? "" : "s"}. View them on your{" "}
+        {isSaved && (
+          <p className="learning-path-success" role="status">
+            Your learning path has been saved successfully. View it on your{" "}
             <Link to="/saved-learning-paths">saved learning paths</Link> page.
           </p>
         )}
@@ -140,16 +117,29 @@ export default function LearningPathPage() {
             className="learning-path-button"
             onClick={() => navigate("/form")}
           >
-            ⟳ Generate New Learning Path
+            <i className="bi bi-arrow-repeat"></i>
+            Generate New Learning Path
           </button>
 
           <button
             type="button"
             className="learning-path-button learning-path-save-button"
             onClick={handleSave}
-            disabled={isSaving}
+            disabled={isSaving || isSaved}
           >
-            {isSaving ? "Saving…" : "✓ Save"}
+            {isSaving ? (
+              "Saving…"
+            ) : isSaved ? (
+              <>
+                <i className="bi bi-check2"></i>
+                Saved
+              </>
+            ) : (
+              <>
+                <i className="bi bi-check2"></i>
+                Save Learning Path
+              </>
+            )}
           </button>
         </div>
       </main>
