@@ -120,7 +120,10 @@ export default function InputContainer({
 
     if (result) {
       navigate("/learning-path", {
-        state: { learningPath: result.learning_path },
+        state: {
+          learningPath: result.learning_path,
+          workingIndustry: workingIndustry,
+        },
       });
     }
   }

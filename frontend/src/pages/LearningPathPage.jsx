@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import "./LearningPathPage.css";
 import { authHeader, clearSession, getSession } from "../util/auth";
+import { INDUSTRY_LABELS } from "../constants/industryConstant";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
@@ -9,6 +10,7 @@ export default function LearningPathPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const learningPath = location.state?.learningPath;
+  const workingIndustry = location.state?.workingIndustry;
 
   const [saveError, setSaveError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -76,7 +78,11 @@ export default function LearningPathPage() {
   return (
     <div className="learning-path-page">
       <main className="learning-path-container">
-        <h2 className="learning-path-title">Your Learning Path</h2>
+        <h2 className="learning-path-title">
+          Your Learning Path{" "}
+          {workingIndustry &&
+            ` - ${INDUSTRY_LABELS[workingIndustry] || workingIndustry}`}
+        </h2>
 
         <ol className="learning-path-steps">
           {learningPath.map((step, index) => (
