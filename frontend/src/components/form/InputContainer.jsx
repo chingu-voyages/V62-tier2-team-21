@@ -122,7 +122,7 @@ export default function InputContainer({
       navigate("/learning-path", {
         state: {
           learningPath: result.learning_path,
-          workingIndustry: workingIndustry,
+          careerGoal: careerGoal,
         },
       });
     }
