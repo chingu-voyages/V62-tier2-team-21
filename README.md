@@ -13,11 +13,14 @@ Screenshots will be added soon.
 ## Features
 
 - **Career and skill assessment:** Enter a career goal, current skill level, working industry, past experience, and weekly study time to personalize the learning path.
-- **AI-powered learning plans:** Generate a learning path tailored to the user's goals and background.
+- **AI-powered learning plans:** Generate personalized learning paths using OpenAI or Gemini.
 - **Step-by-step guidance:** View an ordered list of learning steps, each with a title, description, and estimated completion time.
-- **Progress tracking:** Mark steps as complete using checkboxes and view an updating completed-steps counter.
-- **Generate a new path:** Return to the assessment form and submit different information to generate a new learning path.
-- **Input validation and feedback:** Required fields, text input limits, and study-time limits help users provide valid information. Loading and error messages provide feedback during path generation.
+- **User authentication:** Create an account, log in, and securely access saved learning paths.
+- **Save learning paths:** Save an entire generated learning path to your account.
+- **Manage saved paths:** View, rename, and delete saved learning paths.
+- **Progress tracking:** Mark individual steps as completed using checkboxes on the Saved Learning Paths page and view an updated completion counter.
+- **Generate a new path:** Return to the assessment form and submit different information to generate another learning path.
+- **Input validation and feedback:** Required fields, text input limits, and study-time limits help users provide valid information. Loading and error messages provide feedback during path generation and saving.
 
 ## Tech Stack
 
@@ -35,10 +38,15 @@ Screenshots will be added soon.
 1. Open the home page and proceed to the career and skill assessment form.
 2. Enter your career goal, current skill level, working industry, past experience, and available study hours per week.
 3. Submit the form. The frontend validates the input and sends it to the backend through `POST /user-input`.
-4. The backend builds a prompt from your answers, requests an AI-generated learning plan, and returns structured learning steps.
-5. Review the generated path on the results page and use the checkboxes to mark completed steps. The completed-steps counter updates as you change the checkboxes.
+4. The backend generates a personalized learning path using the selected AI provider and returns structured learning steps.
+5. Review the generated learning path on the Results page.
+6. Create an account or log in to save the entire learning path.
+7. Open the Saved Learning Paths page to view and manage saved paths.
+8. Expand a saved path to view its steps and use checkboxes to mark completed steps. The completion counter updates after successful progress updates once backend support is available.
 
-To create another learning path, return to the form and submit a new assessment.
+Users can also rename or delete an entire saved learning path.
+
+To create another learning path, return to the assessment form and submit a new assessment.
 
 ## Project Structure
 
@@ -130,4 +138,3 @@ You can change the model with the `OPENAI_MODEL` environment variable. The API k
 - Zaina Alahmar: [GitHub](https://github.com/ZainaAlahmar) / [LinkedIn](https://www.linkedin.com/in/zaina-alahmar)
 - Chimdindu Nwobodo: [GitHub](https://github.com/chimdisandra) /[LinkedIn](https://www.linkedin.com/in/chimdindu-nwobodo-ba0a75316)
 - Tee Femiola: GitHub [https://github.com/teefemiola-pixel] / LinkedIn https://www.linkedin.com/in/tusa-femiola/
-  
