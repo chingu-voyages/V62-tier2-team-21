@@ -143,6 +143,14 @@
   outline-offset: 2px;
 }
 
+.saved-learning-path-rename-form {
+  width: 100%;
+}
+
+.saved-learning-path-rename-input {
+  width: 80%;
+}
+
 /* Accordion animation */
 
 .saved-learning-path-content {

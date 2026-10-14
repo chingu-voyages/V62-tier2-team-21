@@ -11,6 +11,7 @@ export default function LearningPathPage() {
   const navigate = useNavigate();
   const learningPath = location.state?.learningPath;
   const workingIndustry = location.state?.workingIndustry;
+  const careerGoal = location.state?.careerGoal;
 
   const [saveError, setSaveError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -44,7 +45,9 @@ export default function LearningPathPage() {
           ...authHeader(),
         },
         body: JSON.stringify({
-          title: "My Learning Path",
+          title: careerGoal
+            ? `My Learning Path - ${careerGoal}`
+            : "My Learning Path",
           items: learningPath,
         }),
       });

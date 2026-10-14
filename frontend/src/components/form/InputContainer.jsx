@@ -123,6 +123,7 @@ export default function InputContainer({
         state: {
           learningPath: result.learning_path,
           workingIndustry: workingIndustry,
+          careerGoal: careerGoal,
         },
       });
     }

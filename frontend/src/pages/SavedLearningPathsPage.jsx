@@ -274,6 +274,7 @@ export default function SavedLearningPathsPage() {
                       maxLength={200}
                       autoFocus
                       placeholder="Add a title or note"
+                      className="saved-learning-path-rename-input"
                       onChange={(event) => setEditingTitle(event.target.value)}
                     />
 
