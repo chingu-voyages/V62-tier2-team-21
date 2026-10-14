@@ -80,6 +80,7 @@
   bottom: 0rem;
   color: #8d8d8d;
   transform: rotate(15deg);
+  animation: rotate-clockwise 4s linear infinite;
 }
 
 .gear-small {
@@ -88,6 +89,7 @@
   bottom: 3.6rem;
   color: #b0b0b0;
   transform: rotate(-10deg);
+  animation: rotate-counterclockwise 3s linear infinite;
 }
 /* style for error container */
 
@@ -112,6 +114,34 @@
 .error-icon {
   color: #787a7b;
   font-size: 10rem;
+}
+
+/* Gear rotation animation */
+
+@keyframes rotate-clockwise {
+  from {
+    transform: rotate(15deg);
+  }
+  to {
+    transform: rotate(375deg);
+  }
+}
+
+@keyframes rotate-counterclockwise {
+  from {
+    transform: rotate(-10deg);
+  }
+  to {
+    transform: rotate(-370deg);
+  }
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .gear-large,
+  .gear-small {
+    animation: none;
+  }
 }
 
 @media (max-width: 600px) {
