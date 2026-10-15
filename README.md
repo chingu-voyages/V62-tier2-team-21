@@ -13,6 +13,7 @@ Screenshots will be added soon.
 ## Features
 
 - **Career and skill assessment:** Enter a career goal, current skill level, working industry, past experience, and weekly study time to personalize the learning path.
+- **Loading state and animations:** Display a time-based progress bar and rotating cog animations while the AI generates a learning path, providing visual feedback during the loading process.
 - **AI-powered learning plans:** Generate personalized learning paths using OpenAI or Gemini.
 - **Step-by-step guidance:** View an ordered list of learning steps, each with a title, description, and estimated completion time.
 - **User authentication:** Create an account, log in, and securely access saved learning paths.
