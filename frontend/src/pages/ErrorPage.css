@@ -1,0 +1,138 @@
+.error-page {
+  --error-card: #ffffff;
+  --error-border: #e4e6e9;
+  --error-text: #24352d;
+  --error-muted: #66736c;
+  --error-accent: #315041;
+  --error-accent-dark: #243e32;
+
+  min-height: 100vh;
+  box-sizing: border-box;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem;
+
+  color: var(--error-text);
+  font-family: "Inter", sans-serif;
+}
+
+.error-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+
+  width: min(92%, 46rem);
+  box-sizing: border-box;
+  padding: 4rem;
+
+  background: var(--error-card);
+  border: 1px solid var(--error-border);
+  border-radius: 2rem;
+  box-shadow: 0 0.8rem 2.4rem rgba(0, 0, 0, 0.08);
+}
+
+.error-icon-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  width: 8rem;
+  height: 8rem;
+  margin-bottom: 2rem;
+
+  background: #edf3ef;
+  border-radius: 50%;
+  color: var(--error-accent);
+}
+
+.error-icon-wrapper i {
+  font-size: 4rem;
+}
+
+.error-title {
+  font-family: "DM Serif Display", serif;
+  font-size: 3.6rem;
+  font-weight: 400;
+  line-height: 1.2;
+  color: var(--error-text);
+  margin: 0 0 1.2rem;
+}
+
+.error-description {
+  font-size: 1.5rem;
+  line-height: 1.6;
+  color: var(--error-muted);
+  margin: 0 0 2.4rem;
+}
+
+.error-home-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+
+  width: 100%;
+  border: 0;
+  border-radius: 999px;
+  background: var(--error-accent);
+  color: #ffffff;
+
+  font-family: inherit;
+  font-size: 1.7rem;
+  font-weight: 700;
+  padding: 1.3rem 2rem;
+
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease;
+}
+
+.error-home-button:hover {
+  background: var(--error-accent-dark);
+  transform: translateY(-1px);
+}
+
+.error-home-button:focus-visible {
+  outline: 3px solid rgba(49, 80, 65, 0.3);
+  outline-offset: 3px;
+}
+
+.error-home-button i {
+  font-size: 1.8rem;
+}
+
+@media (max-width: 480px) {
+  .error-page {
+    padding: 1.6rem;
+  }
+
+  .error-container {
+    width: 100%;
+    padding: 3rem 2.6rem;
+    border-radius: 1.4rem;
+  }
+
+  .error-icon-wrapper {
+    width: 6.8rem;
+    height: 6.8rem;
+  }
+
+  .error-icon-wrapper i {
+    font-size: 3.4rem;
+  }
+
+  .error-title {
+    font-size: 2.8rem;
+  }
+
+  .error-description {
+    font-size: 1.4rem;
+  }
+
+  .error-home-button {
+    font-size: 1.5rem;
+  }
+}

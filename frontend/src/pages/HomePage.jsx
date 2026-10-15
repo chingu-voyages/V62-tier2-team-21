@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { getSession } from "../util/auth";
 import "./HomePage.css";
 import "bootstrap-icons/font/bootstrap-icons.css";
 
@@ -15,7 +16,7 @@ export default function HomePage() {
         </p>
         <button
           className="get-started-button"
-          onClick={() => navigate("/login")}
+          onClick={() => navigate(getSession() ? "/form" : "/login")}
         >
           <i className="bi bi-door-open-fill"></i>
           <p>Get Started</p>
