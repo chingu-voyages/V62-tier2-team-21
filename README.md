@@ -8,7 +8,31 @@ Based on the user's career goal, current skill level, professional background, a
 
 ## Screenshots
 
-Screenshots will be added soon.
+## Screenshots
+
+### Home Page
+
+![Home Page](docs/screenshots/HomePage.png)
+
+### Login Page
+
+![Login Page](docs/screenshots/LoginPage.png)
+
+### Career & Skill Assessment Form
+
+![Assessment Form](docs/screenshots/FormPage.png)
+
+### Loading Screen
+
+![Loading Screen](docs/screenshots/LoadingPage.png)
+
+### Generated Learning Path
+
+![Generated Learning Path](docs/screenshots/ResultPage.png)
+
+### Saved Learning Paths & Progress Tracking
+
+![Saved Learning Paths](docs/screenshots/SavedLearningPath.png)
 
 ## Features
 
@@ -25,14 +49,15 @@ Screenshots will be added soon.
 
 ## Tech Stack
 
-| Area                  | Technologies                         |
-| --------------------- | ------------------------------------ |
-| Frontend              | React, JavaScript, React Router, CSS |
-| Frontend tooling      | Vite, npm, ESLint                    |
-| Icons                 | Bootstrap Icons                      |
-| Backend               | Python, FastAPI, Pydantic, Uvicorn   |
-| AI integration        | OpenAI API, Gemini API               |
-| Backend configuration | python-dotenv                        |
+| Area                  | Technologies                       |
+| --------------------- | ---------------------------------- |
+| Frontend              | React, JavaScript                  |
+| Routing               | React Router                       |
+| Styling & Icons       | CSS, Bootstrap Icons               |
+| Frontend Tooling      | Vite, npm, ESLint                  |
+| Backend               | Python, FastAPI, Pydantic, Uvicorn |
+| AI integration        | OpenAI API, Gemini API             |
+| Backend configuration | python-dotenv                      |
 
 ## How It Works
 
@@ -134,8 +159,6 @@ You can change the model with the `OPENAI_MODEL` environment variable. The API k
 
 - Terence Lui: [GitHub](https://github.com/lwhterence) / [LinkedIn](https://www.linkedin.com/in/terence-lui-7ab78a4/)
 - Han [GitHub](https://github.com/hnkcodes)
-- Eman: [GitHub](https://github.com/emannaji597) / [LinkedIn](https://www.linkedin.com/in/eman-naji-485203311/)
-- Ahmet: [GitHub](https://www.linkedin.com/in/ahmet-sagdasli) / [LinkedIn](https://github.com/ahmetsagdasli)
-- Zaina Alahmar: [GitHub](https://github.com/ZainaAlahmar) / [LinkedIn](https://www.linkedin.com/in/zaina-alahmar)
+- Ahmet: [GitHub](https://github.com/ahmetsagdasli) / [LinkedIn](https://www.linkedin.com/in/ahmet-sagdasli)
 - Chimdindu Nwobodo: [GitHub](https://github.com/chimdisandra) /[LinkedIn](https://www.linkedin.com/in/chimdindu-nwobodo-ba0a75316)
-- Tee Femiola: GitHub [https://github.com/teefemiola-pixel] / LinkedIn https://www.linkedin.com/in/tusa-femiola/
+- Tee Femiola: [GitHub](https://github.com/teefemiola-pixel) / [LinkedIn](https://www.linkedin.com/in/tusa-femiola/)
