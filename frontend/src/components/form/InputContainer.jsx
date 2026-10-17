@@ -116,7 +116,10 @@ export default function InputContainer({
       available_time: availableTime,
     };
 
-    const result = await sendData(enteredData);
+    const [result] = await Promise.all([
+      sendData(enteredData),
+      new Promise((resolve) => setTimeout(resolve, TIMEOUT_SECONDS * 1000)),
+    ]);
 
     if (result) {
       navigate("/learning-path", {
