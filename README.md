@@ -111,7 +111,21 @@ Open the local URL printed by Vite, normally `http://localhost:5173`.
 
 ## Backend API
 
-The FastAPI backend generates structured learning paths with OpenAI or Gemini. It also provides database-backed user accounts, bearer-token sessions, and saved learning-path management. Interactive API documentation is available at `http://localhost:8000/docs` while the server is running.
+The FastAPI backend generates structured learning paths with OpenAI or Gemini. It also provides PostgreSQL-backed user accounts, bearer-token sessions, and saved learning-path management. Interactive API documentation, including every request and response schema, is available at `http://localhost:8000/docs` while the server is running.
+
+### Architecture
+
+```mermaid
+flowchart LR
+    user[User] --> frontend[React frontend]
+    frontend -->|Generate a path\nPOST /user-input| api[FastAPI backend]
+    api -->|Prompt and structured response| llm[OpenAI or Gemini]
+    llm --> api
+    frontend -->|Register, log in, save or update a path\nBearer token where required| api
+    api -->|Users, sessions, saved paths, and steps| database[(PostgreSQL / Supabase)]
+```
+
+The frontend never connects to the database or AI providers directly. The backend validates requests, enforces generation and authentication limits, calls the selected provider, and stores account-related data.
 
 ### Run locally
 
@@ -121,11 +135,37 @@ python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
-# Set OPENAI_API_KEY and/or GEMINI_API_KEY, then configure DATABASE_URL for PostgreSQL.
+# Set the required values described below.
 uvicorn main:app --reload --port 8000
 ```
 
-Keep API keys and database credentials in `backend/.env`; never commit them or expose them in the frontend.
+Keep API keys and database credentials in `backend/.env`; never commit them or expose them in the frontend. The default development URL is `http://localhost:8000`.
+
+### Environment variables
+
+| Variable | Required | Purpose |
+| --- | --- | --- |
+| `OPENAI_API_KEY` | When using OpenAI | API key for the OpenAI provider. |
+| `OPENAI_MODEL` | No | OpenAI model name; defaults to `gpt-5.6-luna`. |
+| `GEMINI_API_KEY` | When using Gemini | API key for the Gemini provider. |
+| `GEMINI_MODEL` | No | Gemini model name; defaults to `gemini-3.8-flash`. |
+| `DATABASE_URL` | For accounts and saved paths | PostgreSQL connection URL. Use the Supabase Transaction Pooler URL with `sslmode=require` in production. |
+| `ALLOWED_ORIGINS` | No | Comma-separated frontend origins allowed by CORS. Local Vite origins are the default. |
+| `DAILY_GENERATION_LIMIT` | No | Maximum learning-path generations per client IP per UTC day; defaults to `3`. |
+| `LLM_MAX_OUTPUT_TOKENS` | No | Maximum tokens requested from the selected provider; defaults to `2000`. |
+| `TEST_DATABASE_URL` | For integration tests | Disposable local PostgreSQL database used only by the test suite. It must never be the production `DATABASE_URL`. |
+
+### Database setup
+
+Create a PostgreSQL database (or Supabase project), set `DATABASE_URL` in `backend/.env`, then apply the migrations in order from the `backend/` directory:
+
+```bash
+for migration in migrations/*.sql; do
+  psql "$DATABASE_URL" -f "$migration"
+done
+```
+
+The migrations create the `users`, `user_sessions`, `login_rate_limits`, `saved_learning_paths`, and `saved_learning_path_items` tables. Apply each migration once to a new or appropriately versioned database. The backend connects directly to PostgreSQL; it does not use Supabase's public REST API.
 
 ### Main endpoints
 
@@ -143,7 +183,39 @@ Keep API keys and database credentials in `backend/.env`; never commit them or e
 | `PATCH` / `DELETE /learning-path/saved/{saved_path_id}/items/{item_id}` | Updates a step's completion state or deletes that step. |
 | `DELETE /auth/account` | Permanently deletes the authenticated user's account and its data. |
 
-The older `POST /generate` and `POST /generate/text` endpoints remain available for simple prompt-based generation and manual testing. Routes that access account or saved-path data require `Authorization: Bearer <token>`.
+`POST /user-input` accepts the following shape and returns structured steps in `learning_path`:
+
+```json
+{
+  "career_goal": "Frontend developer",
+  "current_skill_level": "beginner",
+  "working_industry": "Retail",
+  "past_experience": "I have built a few small HTML and CSS projects.",
+  "available_time": 8,
+  "provider": "openai"
+}
+```
+
+Authentication and saved-path routes require the token returned by `POST /auth/login`:
+
+```http
+Authorization: Bearer <session_token>
+```
+
+The older `POST /generate` and `POST /generate/text` endpoints remain available for simple prompt-based generation and manual testing. Use `/docs` for their full schemas and example responses.
+
+### Tests
+
+Install the development dependencies and point `TEST_DATABASE_URL` to a disposable local PostgreSQL database:
+
+```bash
+cd backend
+pip install -r requirements-dev.txt
+export TEST_DATABASE_URL="postgresql://USER:PASSWORD@localhost:5432/learning_path_test"
+pytest
+```
+
+The test suite runs every migration against the test database and truncates its tables between tests. Never set `TEST_DATABASE_URL` to the production database.
 
 ## Our Team
 
