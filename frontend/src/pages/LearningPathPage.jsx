@@ -2,8 +2,7 @@ import { useState } from "react";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import "./LearningPathPage.css";
 import { authHeader, clearSession, getSession } from "../util/auth";
-
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+import { API_URL } from "../util/api";
 
 export default function LearningPathPage() {
   const location = useLocation();

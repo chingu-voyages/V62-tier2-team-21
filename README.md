@@ -8,8 +8,6 @@ Based on the user's career goal, current skill level, professional background, a
 
 ## Screenshots
 
-## Screenshots
-
 ### Home Page
 
 ![Home Page](docs/screenshots/HomePage.png)
@@ -68,7 +66,7 @@ Based on the user's career goal, current skill level, professional background, a
 5. Review the generated learning path on the Results page.
 6. Create an account or log in to save the entire learning path.
 7. Open the Saved Learning Paths page to view and manage saved paths.
-8. Expand a saved path to view its steps and use checkboxes to mark completed steps. The completion counter updates after successful progress updates once backend support is available.
+8. Expand a saved path to view its steps and use checkboxes to mark completed steps. The completion counter updates after each successful progress update.
 
 Users can also rename or delete an entire saved learning path.
 
@@ -99,7 +97,7 @@ git clone https://github.com/chingu-voyages/V62-tier2-team-21.git
 cd V62-tier2-team-21
 ```
 
-Start the backend using the instructions in [MVP API](#mvp-api).
+Start the backend using the instructions in [Backend API](#backend-api).
 
 In a separate terminal, run:
 
@@ -111,9 +109,9 @@ npm run dev
 
 Open the local URL printed by Vite, normally `http://localhost:5173`.
 
-## MVP API
+## Backend API
 
-The first version accepts a single user `prompt`, sends it to the OpenAI Responses API, and returns the model's text response. User accounts, conversation history, a database, and streaming are out of scope for this phase.
+The FastAPI backend generates structured learning paths with OpenAI or Gemini. It also provides database-backed user accounts, bearer-token sessions, and saved learning-path management. Interactive API documentation is available at `http://localhost:8000/docs` while the server is running.
 
 ### Run locally
 
@@ -123,37 +121,29 @@ python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
-# Replace OPENAI_API_KEY in .env with your own API key
+# Set OPENAI_API_KEY and/or GEMINI_API_KEY, then configure DATABASE_URL for PostgreSQL.
 uvicorn main:app --reload --port 8000
 ```
 
-API documentation: `http://localhost:8000/docs`
+Keep API keys and database credentials in `backend/.env`; never commit them or expose them in the frontend.
 
-### Endpoints
+### Main endpoints
 
-`GET /health` checks that the API is running.
+| Endpoint | Description |
+| --- | --- |
+| `GET /health` | Checks API health and lists the supported AI providers. |
+| `POST /user-input` | Generates a structured learning path from career goal, skill level, industry, experience, weekly study time, and selected provider (`openai` or `gemini`). |
+| `POST /auth/register` | Creates a user account. |
+| `POST /auth/login` | Authenticates a user and returns a bearer session token. |
+| `GET /auth/me` | Returns the current user. |
+| `POST /auth/logout` / `POST /auth/logout-all` | Revokes the current session or all sessions. |
+| `POST /learning-path/save` | Saves a generated learning path for the authenticated user. |
+| `GET /learning-path/saved` | Lists the authenticated user's saved learning paths. |
+| `PATCH` / `DELETE /learning-path/saved/{saved_path_id}` | Renames or deletes a saved learning path. |
+| `PATCH` / `DELETE /learning-path/saved/{saved_path_id}/items/{item_id}` | Updates a step's completion state or deletes that step. |
+| `DELETE /auth/account` | Permanently deletes the authenticated user's account and its data. |
 
-`POST /generate` generates a response for one prompt:
-
-```json
-{
-  "prompt": "Create a beginner learning plan for becoming a software developer."
-}
-```
-
-`POST /generate/text` accepts the same request body but returns only the LLM text as `text/plain`. It is useful for quick manual tests in Postman, where line breaks appear directly in the response body.
-
-Successful response:
-
-```json
-{
-  "response": "...",
-  "response_id": "resp_...",
-  "model": "gpt-5.6-luna"
-}
-```
-
-You can change the model with the `OPENAI_MODEL` environment variable. The API key must remain only in the backend `.env` file and must never be added to the frontend or Git.
+The older `POST /generate` and `POST /generate/text` endpoints remain available for simple prompt-based generation and manual testing. Routes that access account or saved-path data require `Authorization: Bearer <token>`.
 
 ## Our Team
 

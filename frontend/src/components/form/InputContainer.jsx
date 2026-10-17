@@ -5,6 +5,7 @@ import SelectInput from "./SelectInput";
 import NumberInput from "./NumberInput";
 
 import "./InputContainer.css";
+import { API_URL } from "../../util/api";
 import { validateInput } from "../../util/validation";
 import {
   CAREERGOAL_CHARACTERS_MAX,
@@ -28,8 +29,6 @@ export default function InputContainer({
     careerGoal: "",
     pastExperience: "",
   });
-
-  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
   async function sendData(enteredData) {
     const controller = new AbortController();

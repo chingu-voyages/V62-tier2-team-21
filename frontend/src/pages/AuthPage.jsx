@@ -3,9 +3,8 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import "bootstrap-icons/font/bootstrap-icons.css";
 import Footer from "../components/layout/Footer";
 import { saveSession } from "../util/auth";
+import { API_URL } from "../util/api";
 import "./AuthPage.css";
-
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 export default function AuthPage() {
   const navigate = useNavigate();

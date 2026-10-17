@@ -4,8 +4,7 @@ import "./Header.css";
 import "bootstrap-icons/font/bootstrap-icons.css";
 import logoImg from "/ChinguV62Team21LogoImg.png";
 import { clearSession, getSession } from "../../util/auth";
-
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+import { API_URL } from "../../util/api";
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
