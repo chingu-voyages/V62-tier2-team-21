@@ -148,7 +148,7 @@ Keep API keys and database credentials in `backend/.env`; never commit them or e
 | `OPENAI_API_KEY` | When using OpenAI | API key for the OpenAI provider. |
 | `OPENAI_MODEL` | No | OpenAI model name; defaults to `gpt-5.6-luna`. |
 | `GEMINI_API_KEY` | When using Gemini | API key for the Gemini provider. |
-| `GEMINI_MODEL` | No | Gemini model name; defaults to `gemini-3.8-flash`. |
+| `GEMINI_MODEL` | No | Gemini model name; the code default is `gemini-3.6-flash`. The provided `.env.example` explicitly selects `gemini-3.8-flash`. |
 | `DATABASE_URL` | For accounts and saved paths | PostgreSQL connection URL. Use the Supabase Transaction Pooler URL with `sslmode=require` in production. |
 | `ALLOWED_ORIGINS` | No | Comma-separated frontend origins allowed by CORS. Local Vite origins are the default. |
 | `DAILY_GENERATION_LIMIT` | No | Maximum learning-path generations per client IP per UTC day; defaults to `3`. |
@@ -157,9 +157,13 @@ Keep API keys and database credentials in `backend/.env`; never commit them or e
 
 ### Database setup
 
-Create a PostgreSQL database (or Supabase project), set `DATABASE_URL` in `backend/.env`, then apply the migrations in order from the `backend/` directory:
+Create a PostgreSQL database (or Supabase project), set `DATABASE_URL` in `backend/.env`, then apply the migrations in order from the `backend/` directory. The commands require PostgreSQL's `psql` CLI:
 
 ```bash
+set -a
+source .env
+set +a
+
 for migration in migrations/*.sql; do
   psql "$DATABASE_URL" -f "$migration"
 done
