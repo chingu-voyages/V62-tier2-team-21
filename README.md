@@ -8,31 +8,29 @@ Based on the user's career goal, current skill level, professional background, a
 
 ## Screenshots
 
-## Screenshots
-
 ### Home Page
 
-![Home Page](docs/screenshots/HomePage.png)
+<img src="docs/screenshots/HomePage.png" alt="Home Page" width="600">
 
 ### Login Page
 
-![Login Page](docs/screenshots/LoginPage.png)
+<img src="docs/screenshots/LoginPage.png" alt="Login Page" width="600">
 
 ### Career & Skill Assessment Form
 
-![Assessment Form](docs/screenshots/FormPage.png)
+<img src="docs/screenshots/FormPage.png" alt="Assessment Form" width="600">
 
 ### Loading Screen
 
-![Loading Screen](docs/screenshots/LoadingPage.png)
+<img src="docs/screenshots/LoadingPage.png" alt="Loading Screen" width="600">
 
 ### Generated Learning Path
 
-![Generated Learning Path](docs/screenshots/ResultPage.png)
+<img src="docs/screenshots/ResultPage.png" alt="Generated Learning Path" width="600">
 
 ### Saved Learning Paths & Progress Tracking
 
-![Saved Learning Paths](docs/screenshots/SavedLearningPath.png)
+<img src="docs/screenshots/SavedLearningPath.png" alt="Saved Learning Paths" width="600">
 
 ## Features
 
@@ -68,7 +66,7 @@ Based on the user's career goal, current skill level, professional background, a
 5. Review the generated learning path on the Results page.
 6. Create an account or log in to save the entire learning path.
 7. Open the Saved Learning Paths page to view and manage saved paths.
-8. Expand a saved path to view its steps and use checkboxes to mark completed steps. The completion counter updates after successful progress updates once backend support is available.
+8. Expand a saved path to view its steps and use checkboxes to mark completed steps. The completion counter updates after each successful progress update.
 
 Users can also rename or delete an entire saved learning path.
 
@@ -99,7 +97,7 @@ git clone https://github.com/chingu-voyages/V62-tier2-team-21.git
 cd V62-tier2-team-21
 ```
 
-Start the backend using the instructions in [MVP API](#mvp-api).
+Start the backend using the instructions in [Backend API](#backend-api).
 
 In a separate terminal, run:
 
@@ -111,9 +109,23 @@ npm run dev
 
 Open the local URL printed by Vite, normally `http://localhost:5173`.
 
-## MVP API
+## Backend API
 
-The first version accepts a single user `prompt`, sends it to the OpenAI Responses API, and returns the model's text response. User accounts, conversation history, a database, and streaming are out of scope for this phase.
+The FastAPI backend generates structured learning paths with OpenAI or Gemini. It also provides PostgreSQL-backed user accounts, bearer-token sessions, and saved learning-path management. Interactive API documentation, including every request and response schema, is available at `http://localhost:8000/docs` while the server is running.
+
+### Architecture
+
+```mermaid
+flowchart LR
+    user[User] --> frontend[React frontend]
+    frontend -->|Generate a path\nPOST /user-input| api[FastAPI backend]
+    api -->|Prompt and structured response| llm[OpenAI or Gemini]
+    llm --> api
+    frontend -->|Register, log in, save or update a path\nBearer token where required| api
+    api -->|Users, sessions, saved paths, and steps| database[(PostgreSQL / Supabase)]
+```
+
+The frontend never connects to the database or AI providers directly. The backend validates requests, enforces generation and authentication limits, calls the selected provider, and stores account-related data.
 
 ### Run locally
 
@@ -123,42 +135,96 @@ python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
-# Replace OPENAI_API_KEY in .env with your own API key
+# Set the required values described below.
 uvicorn main:app --reload --port 8000
 ```
 
-API documentation: `http://localhost:8000/docs`
+Keep API keys and database credentials in `backend/.env`; never commit them or expose them in the frontend. The default development URL is `http://localhost:8000`.
 
-### Endpoints
+### Environment variables
 
-`GET /health` checks that the API is running.
+| Variable                 | Required                     | Purpose                                                                                                                       |
+| ------------------------ | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `OPENAI_API_KEY`         | When using OpenAI            | API key for the OpenAI provider.                                                                                              |
+| `OPENAI_MODEL`           | No                           | OpenAI model name; defaults to `gpt-5.6-luna`.                                                                                |
+| `GEMINI_API_KEY`         | When using Gemini            | API key for the Gemini provider.                                                                                              |
+| `GEMINI_MODEL`           | No                           | Gemini model name; the code default is `gemini-3.6-flash`. The provided `.env.example` explicitly selects `gemini-3.8-flash`. |
+| `DATABASE_URL`           | For accounts and saved paths | PostgreSQL connection URL. Use the Supabase Transaction Pooler URL with `sslmode=require` in production.                      |
+| `ALLOWED_ORIGINS`        | No                           | Comma-separated frontend origins allowed by CORS. Local Vite origins are the default.                                         |
+| `DAILY_GENERATION_LIMIT` | No                           | Maximum learning-path generations per client IP per UTC day; defaults to `3`.                                                 |
+| `LLM_MAX_OUTPUT_TOKENS`  | No                           | Maximum tokens requested from the selected provider; defaults to `2000`.                                                      |
+| `TEST_DATABASE_URL`      | For integration tests        | Disposable local PostgreSQL database used only by the test suite. It must never be the production `DATABASE_URL`.             |
 
-`POST /generate` generates a response for one prompt:
+### Database setup
+
+Create a PostgreSQL database (or Supabase project), set `DATABASE_URL` in `backend/.env`, then apply the migrations in order from the `backend/` directory. The commands require PostgreSQL's `psql` CLI:
+
+```bash
+set -a
+source .env
+set +a
+
+for migration in migrations/*.sql; do
+  psql "$DATABASE_URL" -f "$migration"
+done
+```
+
+The migrations create the `users`, `user_sessions`, `login_rate_limits`, `saved_learning_paths`, and `saved_learning_path_items` tables. Apply each migration once to a new or appropriately versioned database. The backend connects directly to PostgreSQL; it does not use Supabase's public REST API.
+
+### Main endpoints
+
+| Endpoint                                                                | Description                                                                                                                                                |
+| ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /health`                                                           | Checks API health and lists the supported AI providers.                                                                                                    |
+| `POST /user-input`                                                      | Generates a structured learning path from career goal, skill level, industry, experience, weekly study time, and selected provider (`openai` or `gemini`). |
+| `POST /auth/register`                                                   | Creates a user account.                                                                                                                                    |
+| `POST /auth/login`                                                      | Authenticates a user and returns a bearer session token.                                                                                                   |
+| `GET /auth/me`                                                          | Returns the current user.                                                                                                                                  |
+| `POST /auth/logout` / `POST /auth/logout-all`                           | Revokes the current session or all sessions.                                                                                                               |
+| `POST /learning-path/save`                                              | Saves a generated learning path for the authenticated user.                                                                                                |
+| `GET /learning-path/saved`                                              | Lists the authenticated user's saved learning paths.                                                                                                       |
+| `PATCH` / `DELETE /learning-path/saved/{saved_path_id}`                 | Renames or deletes a saved learning path.                                                                                                                  |
+| `PATCH` / `DELETE /learning-path/saved/{saved_path_id}/items/{item_id}` | Updates a step's completion state or deletes that step.                                                                                                    |
+| `DELETE /auth/account`                                                  | Permanently deletes the authenticated user's account and its data.                                                                                         |
+
+`POST /user-input` accepts the following shape and returns structured steps in `learning_path`:
 
 ```json
 {
-  "prompt": "Create a beginner learning plan for becoming a software developer."
+  "career_goal": "Frontend developer",
+  "current_skill_level": "beginner",
+  "working_industry": "Retail",
+  "past_experience": "I have built a few small HTML and CSS projects.",
+  "available_time": 8,
+  "provider": "openai"
 }
 ```
 
-`POST /generate/text` accepts the same request body but returns only the LLM text as `text/plain`. It is useful for quick manual tests in Postman, where line breaks appear directly in the response body.
+Authentication and saved-path routes require the token returned by `POST /auth/login`:
 
-Successful response:
-
-```json
-{
-  "response": "...",
-  "response_id": "resp_...",
-  "model": "gpt-5.6-luna"
-}
+```http
+Authorization: Bearer <session_token>
 ```
 
-You can change the model with the `OPENAI_MODEL` environment variable. The API key must remain only in the backend `.env` file and must never be added to the frontend or Git.
+The older `POST /generate` and `POST /generate/text` endpoints remain available for simple prompt-based generation and manual testing. Use `/docs` for their full schemas and example responses.
+
+### Tests
+
+Install the development dependencies and point `TEST_DATABASE_URL` to a disposable local PostgreSQL database:
+
+```bash
+cd backend
+pip install -r requirements-dev.txt
+export TEST_DATABASE_URL="postgresql://USER:PASSWORD@localhost:5432/learning_path_test"
+pytest
+```
+
+The test suite runs every migration against the test database and truncates its tables between tests. Never set `TEST_DATABASE_URL` to the production database.
 
 ## Our Team
 
 - Terence Lui: [GitHub](https://github.com/lwhterence) / [LinkedIn](https://www.linkedin.com/in/terence-lui-7ab78a4/)
-- Han [GitHub](https://github.com/hnkcodes)
+- Han: [GitHub](https://github.com/hnkcodes)
 - Ahmet: [GitHub](https://github.com/ahmetsagdasli) / [LinkedIn](https://www.linkedin.com/in/ahmet-sagdasli)
 - Chimdindu Nwobodo: [GitHub](https://github.com/chimdisandra) /[LinkedIn](https://www.linkedin.com/in/chimdindu-nwobodo-ba0a75316)
 - Tee Femiola: [GitHub](https://github.com/teefemiola-pixel) / [LinkedIn](https://www.linkedin.com/in/tusa-femiola/)
