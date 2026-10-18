@@ -143,6 +143,7 @@ Keep API keys and database credentials in `backend/.env`; never commit them or e
 
 ### Environment variables
 
+
 | Variable                 | Required                     | Purpose                                                                                                                       |
 | ------------------------ | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
 | `OPENAI_API_KEY`         | When using OpenAI            | API key for the OpenAI provider.                                                                                              |
@@ -154,6 +155,7 @@ Keep API keys and database credentials in `backend/.env`; never commit them or e
 | `DAILY_GENERATION_LIMIT` | No                           | Maximum learning-path generations per client IP per UTC day; defaults to `3`.                                                 |
 | `LLM_MAX_OUTPUT_TOKENS`  | No                           | Maximum tokens requested from the selected provider; defaults to `2000`.                                                      |
 | `TEST_DATABASE_URL`      | For integration tests        | Disposable local PostgreSQL database used only by the test suite. It must never be the production `DATABASE_URL`.             |
+
 
 ### Database setup
 
@@ -186,6 +188,7 @@ The migrations create the `users`, `user_sessions`, `login_rate_limits`, `saved_
 | `PATCH` / `DELETE /learning-path/saved/{saved_path_id}`                 | Renames or deletes a saved learning path.                                                                                                                  |
 | `PATCH` / `DELETE /learning-path/saved/{saved_path_id}/items/{item_id}` | Updates a step's completion state or deletes that step.                                                                                                    |
 | `DELETE /auth/account`                                                  | Permanently deletes the authenticated user's account and its data.                                                                                         |
+
 
 `POST /user-input` accepts the following shape and returns structured steps in `learning_path`:
 

@@ -3,8 +3,7 @@ import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import "bootstrap-icons/font/bootstrap-icons.css";
 import "./SavedLearningPathPage.css";
 import { authHeader, clearSession, getSession } from "../util/auth";
-
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+import { API_URL } from "../util/api";
 
 export default function SavedLearningPathsPage() {
   const location = useLocation();

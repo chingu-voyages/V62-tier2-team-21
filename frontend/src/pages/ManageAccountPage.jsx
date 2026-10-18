@@ -4,8 +4,7 @@ import "./LearningPathPage.css";
 import "./ManageAccountPage.css";
 import Footer from "../components/layout/Footer";
 import { authHeader, clearSession, getSession } from "../util/auth";
-
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+import { API_URL } from "../util/api";
 
 export default function ManageAccountPage() {
   const location = useLocation();
