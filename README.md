@@ -7,30 +7,29 @@ Learning Path to Career is an AI-powered web application that turns career goals
 Based on the user's career goal, current skill level, professional background, and weekly study time, the application generates a learning path covering approximately six months. Users can follow the steps and track their progress as they learn.
 
 ## Screenshots
-
 ### Home Page
 
-![Home Page](docs/screenshots/HomePage.png)
+<img src="docs/screenshots/HomePage.png" alt="Home Page" width="600">
 
 ### Login Page
 
-![Login Page](docs/screenshots/LoginPage.png)
+<img src="docs/screenshots/LoginPage.png" alt="Login Page" width="600">
 
 ### Career & Skill Assessment Form
 
-![Assessment Form](docs/screenshots/FormPage.png)
+<img src="docs/screenshots/FormPage.png" alt="Assessment Form" width="600">
 
 ### Loading Screen
 
-![Loading Screen](docs/screenshots/LoadingPage.png)
+<img src="docs/screenshots/LoadingPage.png" alt="Loading Screen" width="600">
 
 ### Generated Learning Path
 
-![Generated Learning Path](docs/screenshots/ResultPage.png)
+<img src="docs/screenshots/ResultPage.png" alt="Generated Learning Path" width="600">
 
 ### Saved Learning Paths & Progress Tracking
 
-![Saved Learning Paths](docs/screenshots/SavedLearningPath.png)
+<img src="docs/screenshots/SavedLearningPath.png" alt="Saved Learning Paths" width="600">
 
 ## Features
 
@@ -224,7 +223,7 @@ The test suite runs every migration against the test database and truncates its 
 ## Our Team
 
 - Terence Lui: [GitHub](https://github.com/lwhterence) / [LinkedIn](https://www.linkedin.com/in/terence-lui-7ab78a4/)
-- Han [GitHub](https://github.com/hnkcodes)
+- Han: [GitHub](https://github.com/hnkcodes)
 - Ahmet: [GitHub](https://github.com/ahmetsagdasli) / [LinkedIn](https://www.linkedin.com/in/ahmet-sagdasli)
 - Chimdindu Nwobodo: [GitHub](https://github.com/chimdisandra) /[LinkedIn](https://www.linkedin.com/in/chimdindu-nwobodo-ba0a75316)
 - Tee Femiola: [GitHub](https://github.com/teefemiola-pixel) / [LinkedIn](https://www.linkedin.com/in/tusa-femiola/)
