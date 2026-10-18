@@ -7,6 +7,7 @@ Learning Path to Career is an AI-powered web application that turns career goals
 Based on the user's career goal, current skill level, professional background, and weekly study time, the application generates a learning path covering approximately six months. Users can follow the steps and track their progress as they learn.
 
 ## Screenshots
+
 ### Home Page
 
 <img src="docs/screenshots/HomePage.png" alt="Home Page" width="600">
@@ -142,17 +143,19 @@ Keep API keys and database credentials in `backend/.env`; never commit them or e
 
 ### Environment variables
 
-| Variable | Required | Purpose |
-| --- | --- | --- |
-| `OPENAI_API_KEY` | When using OpenAI | API key for the OpenAI provider. |
-| `OPENAI_MODEL` | No | OpenAI model name; defaults to `gpt-5.6-luna`. |
-| `GEMINI_API_KEY` | When using Gemini | API key for the Gemini provider. |
-| `GEMINI_MODEL` | No | Gemini model name; the code default is `gemini-3.6-flash`. The provided `.env.example` explicitly selects `gemini-3.8-flash`. |
-| `DATABASE_URL` | For accounts and saved paths | PostgreSQL connection URL. Use the Supabase Transaction Pooler URL with `sslmode=require` in production. |
-| `ALLOWED_ORIGINS` | No | Comma-separated frontend origins allowed by CORS. Local Vite origins are the default. |
-| `DAILY_GENERATION_LIMIT` | No | Maximum learning-path generations per client IP per UTC day; defaults to `3`. |
-| `LLM_MAX_OUTPUT_TOKENS` | No | Maximum tokens requested from the selected provider; defaults to `2000`. |
-| `TEST_DATABASE_URL` | For integration tests | Disposable local PostgreSQL database used only by the test suite. It must never be the production `DATABASE_URL`. |
+
+| Variable                 | Required                     | Purpose                                                                                                                       |
+| ------------------------ | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `OPENAI_API_KEY`         | When using OpenAI            | API key for the OpenAI provider.                                                                                              |
+| `OPENAI_MODEL`           | No                           | OpenAI model name; defaults to `gpt-5.6-luna`.                                                                                |
+| `GEMINI_API_KEY`         | When using Gemini            | API key for the Gemini provider.                                                                                              |
+| `GEMINI_MODEL`           | No                           | Gemini model name; the code default is `gemini-3.6-flash`. The provided `.env.example` explicitly selects `gemini-3.8-flash`. |
+| `DATABASE_URL`           | For accounts and saved paths | PostgreSQL connection URL. Use the Supabase Transaction Pooler URL with `sslmode=require` in production.                      |
+| `ALLOWED_ORIGINS`        | No                           | Comma-separated frontend origins allowed by CORS. Local Vite origins are the default.                                         |
+| `DAILY_GENERATION_LIMIT` | No                           | Maximum learning-path generations per client IP per UTC day; defaults to `3`.                                                 |
+| `LLM_MAX_OUTPUT_TOKENS`  | No                           | Maximum tokens requested from the selected provider; defaults to `2000`.                                                      |
+| `TEST_DATABASE_URL`      | For integration tests        | Disposable local PostgreSQL database used only by the test suite. It must never be the production `DATABASE_URL`.             |
+
 
 ### Database setup
 
@@ -172,19 +175,20 @@ The migrations create the `users`, `user_sessions`, `login_rate_limits`, `saved_
 
 ### Main endpoints
 
-| Endpoint | Description |
-| --- | --- |
-| `GET /health` | Checks API health and lists the supported AI providers. |
-| `POST /user-input` | Generates a structured learning path from career goal, skill level, industry, experience, weekly study time, and selected provider (`openai` or `gemini`). |
-| `POST /auth/register` | Creates a user account. |
-| `POST /auth/login` | Authenticates a user and returns a bearer session token. |
-| `GET /auth/me` | Returns the current user. |
-| `POST /auth/logout` / `POST /auth/logout-all` | Revokes the current session or all sessions. |
-| `POST /learning-path/save` | Saves a generated learning path for the authenticated user. |
-| `GET /learning-path/saved` | Lists the authenticated user's saved learning paths. |
-| `PATCH` / `DELETE /learning-path/saved/{saved_path_id}` | Renames or deletes a saved learning path. |
-| `PATCH` / `DELETE /learning-path/saved/{saved_path_id}/items/{item_id}` | Updates a step's completion state or deletes that step. |
-| `DELETE /auth/account` | Permanently deletes the authenticated user's account and its data. |
+| Endpoint                                                                | Description                                                                                                                                                |
+| ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /health`                                                           | Checks API health and lists the supported AI providers.                                                                                                    |
+| `POST /user-input`                                                      | Generates a structured learning path from career goal, skill level, industry, experience, weekly study time, and selected provider (`openai` or `gemini`). |
+| `POST /auth/register`                                                   | Creates a user account.                                                                                                                                    |
+| `POST /auth/login`                                                      | Authenticates a user and returns a bearer session token.                                                                                                   |
+| `GET /auth/me`                                                          | Returns the current user.                                                                                                                                  |
+| `POST /auth/logout` / `POST /auth/logout-all`                           | Revokes the current session or all sessions.                                                                                                               |
+| `POST /learning-path/save`                                              | Saves a generated learning path for the authenticated user.                                                                                                |
+| `GET /learning-path/saved`                                              | Lists the authenticated user's saved learning paths.                                                                                                       |
+| `PATCH` / `DELETE /learning-path/saved/{saved_path_id}`                 | Renames or deletes a saved learning path.                                                                                                                  |
+| `PATCH` / `DELETE /learning-path/saved/{saved_path_id}/items/{item_id}` | Updates a step's completion state or deletes that step.                                                                                                    |
+| `DELETE /auth/account`                                                  | Permanently deletes the authenticated user's account and its data.                                                                                         |
+
 
 `POST /user-input` accepts the following shape and returns structured steps in `learning_path`:
 
